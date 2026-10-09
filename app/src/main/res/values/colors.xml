@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
+  <color name="aqua_blue">#00A6D7</color>
+  <color name="aqua_ink">#183E64</color>
+  <color name="aqua_muted">#7393AA</color>
+  <color name="aqua_background">#EFFAFF</color>
+  <color name="aqua_surface">#FFFFFF</color>
+  <color name="aqua_button">#E1F7FF</color>
+  <color name="aqua_dark_ink">#E4F5FF</color>
+  <color name="aqua_dark_muted">#A2BFD0</color>
+  <color name="aqua_dark_background">#0A1C2B</color>
+  <color name="aqua_dark_surface">#122C40</color>
+  <color name="aqua_dark_button">#163B50</color>
 </resources>

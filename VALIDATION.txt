@@ -1,0 +1,12 @@
+Đã áp dụng giao diện WaterReminder_2 vào D:/WaterReminder.
+5 file backend trong database/, models/, services/ của package com.example.waterreminder được xác nhận SHA-256 giống bản sao lưu trước sửa.
+Java và XML resource compilation qua; chưa tạo được APK.
+assembleDebug thất bại ở processDebugResources: AAPT2 thoát bất thường khi link tài nguyên, thử cả AAPT2 Maven và bản trong SDK 36.0.0 đều xảy ra.
+Không cài hay chạy ứng dụng trên điện thoại.
+Bản sao lưu chứa mã nguồn trước sửa, bao gồm các thay đổi chưa commit; không gồm .git và cache build.
+
+Cập nhật thẻ thêm nước gốc: :app:compileDebugJavaWithJavac BUILD SUCCESSFUL. 4 icon gốc và 5 file backend được đối chiếu SHA-256, không thay đổi. Chưa kiểm tra chạy trên điện thoại hoặc tạo APK thành công.
+
+Bỏ danh sách gần đây và mở rộng thẻ thêm nước: :app:compileDebugJavaWithJavac BUILD SUCCESSFUL; XML được kiểm tra không còn log_list trên trang chủ.
+
+Cập nhật lịch sử vuốt ngang Sửa/Xóa: :app:compileDebugJavaWithJavac BUILD SUCCESSFUL. Backend gốc giữ nguyên; chưa kiểm tra thao tác vuốt trên thiết bị.

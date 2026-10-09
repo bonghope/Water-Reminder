@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+  <TextView style="@style/Aqua.Title" android:text="Hành trình của bạn" />
+  <TextView style="@style/Aqua.Caption" android:text="Chăm mình khỏe, nuôi giọt nước lớn lên." />
+  <LinearLayout style="@style/Aqua.Card" android:orientation="vertical">
+    <com.aqua.water.ui.PetView android:layout_width="match_parent" android:layout_height="240dp" />
+    <TextView android:id="@+id/pet_name" style="@style/Aqua.Metric" android:text="" />
+    <TextView android:id="@+id/pet_level" style="@style/Aqua.Caption" android:text="" />
+    <ProgressBar android:id="@+id/pet_progress" style="?android:attr/progressBarStyleHorizontal" android:layout_width="match_parent" android:layout_height="wrap_content" android:progressTint="@color/aqua_blue" />
+  </LinearLayout>
+  <TextView style="@style/Aqua.Title" android:text="Tiến hóa mỗi ngày" />
+  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+    <TextView android:id="@+id/pet_small" style="@style/Aqua.Choice" android:text="💧 Nhỏ" />
+    <TextView android:id="@+id/pet_healthy" style="@style/Aqua.Choice" android:text="💧 Khỏe" />
+    <TextView android:id="@+id/pet_bright" style="@style/Aqua.Choice" android:text="💧 Rực rỡ" />
+  </LinearLayout>
+  <TextView style="@style/Aqua.Caption" android:text="Hoàn thành mục tiêu hôm nay để đạt cấp cao nhất." />
+</LinearLayout>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" style="@style/Aqua.Card" android:orientation="vertical">
+  <TextView style="@style/Aqua.Title" android:text="Chưa có lần uống nào" />
+  <TextView style="@style/Aqua.Caption" android:text="Thêm ly nước đầu tiên ở Trang chủ nhé." />
+</LinearLayout>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+  <TextView style="@style/Aqua.Title" android:text="Cài đặt" />
+  <TextView style="@style/Aqua.Caption" android:text="Một nhịp uống nước phù hợp với bạn." />
+  <LinearLayout style="@style/Aqua.Card" android:orientation="vertical">
+    <TextView style="@style/Aqua.Text" android:text="Mục tiêu mỗi ngày" />
+    <TextView android:id="@+id/goal_button" style="@style/Aqua.Button" android:text="" />
+    <Switch android:id="@+id/theme_switch" style="@style/Aqua.Text" android:minHeight="48dp" android:text="Giao diện tối" />
+  </LinearLayout>
+  <include layout="@layout/view_interval" />
+  <LinearLayout style="@style/Aqua.Card" android:orientation="vertical">
+    <TextView style="@style/Aqua.Title" android:text="Aqua • Water Reminder" />
+    <TextView style="@style/Aqua.Text" android:text="Phiên bản 1.0\nDữ liệu được lưu trên thiết bị.\nHoạt động hoàn toàn ngoại tuyến." />
+  </LinearLayout>
+</LinearLayout>

@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <attr name="aquaBackground" format="color" />
+  <attr name="aquaSurface" format="color" />
+  <attr name="aquaButton" format="color" />
+  <style name="Theme.Aqua" parent="android:style/Theme.Material.Light.NoActionBar">
+    <item name="android:fontFamily">sans</item>
+    <item name="android:colorAccent">@color/aqua_blue</item>
+    <item name="android:textColorPrimary">@color/aqua_ink</item>
+    <item name="android:textColorSecondary">@color/aqua_muted</item>
+    <item name="aquaBackground">@color/aqua_background</item>
+    <item name="aquaSurface">@color/aqua_surface</item>
+    <item name="aquaButton">@color/aqua_button</item>
+    <item name="android:windowLightStatusBar">true</item>
+  </style>
+  <style name="Theme.Aqua.Dark" parent="android:style/Theme.Material.NoActionBar">
+    <item name="android:fontFamily">sans</item>
+    <item name="android:colorAccent">@color/aqua_blue</item>
+    <item name="android:textColorPrimary">@color/aqua_dark_ink</item>
+    <item name="android:textColorSecondary">@color/aqua_dark_muted</item>
+    <item name="aquaBackground">@color/aqua_dark_background</item>
+    <item name="aquaSurface">@color/aqua_dark_surface</item>
+    <item name="aquaButton">@color/aqua_dark_button</item>
+    <item name="android:windowLightStatusBar">false</item>
+  </style>
+  <style name="Aqua.Text" parent="">
+    <item name="android:layout_width">match_parent</item>
+    <item name="android:layout_height">wrap_content</item>
+    <item name="android:textSize">14sp</item>
+    <item name="android:textColor">?android:attr/textColorPrimary</item>
+    <item name="android:paddingTop">5dp</item>
+    <item name="android:paddingBottom">5dp</item>
+  </style>
+  <style name="Aqua.Title" parent="Aqua.Text">
+    <item name="android:textSize">19sp</item>
+    <item name="android:textStyle">bold</item>
+  </style>
+  <style name="Aqua.Caption" parent="Aqua.Text">
+    <item name="android:textSize">13sp</item>
+    <item name="android:textColor">?android:attr/textColorSecondary</item>
+  </style>
+  <style name="Aqua.Metric" parent="Aqua.Text">
+    <item name="android:textSize">23sp</item>
+    <item name="android:textColor">@color/aqua_blue</item>
+  </style>
+  <style name="Aqua.Button" parent="Aqua.Text">
+    <item name="android:gravity">center</item>
+    <item name="android:textColor">@color/aqua_blue</item>
+    <item name="android:padding">12dp</item>
+    <item name="android:minHeight">48dp</item>
+    <item name="android:background">@drawable/bg_button</item>
+    <item name="android:clickable">true</item>
+    <item name="android:focusable">true</item>
+  </style>
+  <style name="Aqua.Choice" parent="Aqua.Button">
+    <item name="android:layout_width">0dp</item>
+    <item name="android:layout_weight">1</item>
+    <item name="android:layout_margin">3dp</item>
+  </style>
+  <style name="Aqua.Card" parent="">
+    <item name="android:layout_width">match_parent</item>
+    <item name="android:layout_height">wrap_content</item>
+    <item name="android:paddingLeft">18dp</item>
+    <item name="android:paddingRight">18dp</item>
+    <item name="android:paddingTop">14dp</item>
+    <item name="android:paddingBottom">14dp</item>
+    <item name="android:layout_marginTop">10dp</item>
+    <item name="android:layout_marginBottom">6dp</item>
+    <item name="android:background">@drawable/bg_card</item>
+  </style>
+  <style name="Aqua.Nav" parent="Aqua.Text">
+    <item name="android:layout_width">0dp</item>
+    <item name="android:layout_weight">1</item>
+    <item name="android:minHeight">54dp</item>
+    <item name="android:gravity">center</item>
+    <item name="android:textSize">10sp</item>
+    <item name="android:textColor">?android:attr/textColorSecondary</item>
+    <item name="android:background">?android:attr/selectableItemBackground</item>
+    <item name="android:clickable">true</item>
+    <item name="android:focusable">true</item>
+  </style>
+  <style name="Aqua.BottomNav" parent="">
+    <item name="android:layout_width">0dp</item>
+    <item name="android:layout_height">match_parent</item>
+    <item name="android:layout_weight">1</item>
+    <item name="android:gravity">center</item>
+    <item name="android:textSize">9sp</item>
+    <item name="android:textColor">#8FA3B8</item>
+    <item name="android:drawableTint">#8FA3B8</item>
+    <item name="android:drawablePadding">4dp</item>
+    <item name="android:paddingTop">6dp</item>
+    <item name="android:paddingBottom">6dp</item>
+    <item name="android:background">?android:attr/selectableItemBackground</item>
+    <item name="android:clickable">true</item>
+    <item name="android:focusable">true</item>
+  </style></resources>

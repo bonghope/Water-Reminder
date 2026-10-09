@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="utf-8"?>
+<EditText xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/amount_input" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="number" android:hint="Ví dụ: 250" android:paddingLeft="24dp" android:paddingRight="24dp" android:paddingTop="16dp" android:paddingBottom="16dp" />
