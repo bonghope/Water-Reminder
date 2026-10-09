@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+  <TextView style="@style/Aqua.Title" android:text="Nhắc nhở uống nước" />
+  <TextView style="@style/Aqua.Caption" android:text="Để Aqua nhắc bạn dành một phút chăm mình." />
+  <LinearLayout style="@style/Aqua.Card" android:orientation="vertical">
+    <Switch android:id="@+id/reminder_switch" style="@style/Aqua.Text" android:minHeight="48dp" android:text="Bật thông báo nhắc uống nước" />
+    <TextView style="@style/Aqua.Caption" android:text="Thông báo được gửi theo chu kỳ bạn chọn." />
+  </LinearLayout>
+  <include layout="@layout/view_interval" />
+  <LinearLayout style="@style/Aqua.Card" android:orientation="vertical">
+    <TextView style="@style/Aqua.Title" android:text="💧 Một ly nước đang chờ bạn" />
+    <TextView style="@style/Aqua.Text" android:text="Nhắc nhở tiếp tục sau khi khởi động lại máy. Android có thể điều chỉnh thời gian để tiết kiệm pin." />
+  </LinearLayout>
+</LinearLayout>

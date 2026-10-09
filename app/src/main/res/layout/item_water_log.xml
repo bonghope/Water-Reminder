@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent">
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+<com.aqua.water.ui.SwipeLogLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="8dp" android:background="@drawable/bg_card" android:clipToOutline="true" android:clipChildren="true">
+  <LinearLayout android:id="@+id/log_actions" android:layout_width="120dp" android:layout_height="match_parent" android:layout_gravity="right" android:orientation="horizontal" android:visibility="invisible">
+    <ImageButton android:id="@+id/log_edit" android:layout_width="60dp" android:layout_height="match_parent" android:background="#2196F3" android:src="@android:drawable/ic_menu_edit" android:tint="#FFFFFF" android:padding="16dp" android:contentDescription="Chỉnh sửa bản ghi" />
+    <ImageButton android:id="@+id/log_delete" android:layout_width="60dp" android:layout_height="match_parent" android:background="#F44336" android:src="@android:drawable/ic_menu_delete" android:tint="#FFFFFF" android:padding="16dp" android:contentDescription="Xóa bản ghi" />
+  </LinearLayout>
+  <LinearLayout android:id="@+id/log_foreground" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="72dp" android:padding="12dp" android:background="@drawable/bg_card" android:clipToOutline="true" android:orientation="vertical" android:clickable="true" android:focusable="true">
+    <TextView android:id="@+id/log_amount" style="@style/Aqua.Text" android:text="" />
+    <TextView android:id="@+id/log_time" style="@style/Aqua.Caption" android:text="" />
+  </LinearLayout>
+</com.aqua.water.ui.SwipeLogLayout>

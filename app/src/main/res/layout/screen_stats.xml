@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+  <TextView style="@style/Aqua.Title" android:text="Thống kê" />
+  <TextView style="@style/Aqua.Caption" android:text="Mỗi ngày đều là một bước tiến." />
+  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+    <TextView android:id="@+id/stats_week" style="@style/Aqua.Choice" android:text="7 ngày" />
+    <TextView android:id="@+id/stats_month" style="@style/Aqua.Choice" android:text="30 ngày" />
+  </LinearLayout>
+  <LinearLayout style="@style/Aqua.Card" android:orientation="vertical">
+    <TextView style="@style/Aqua.Text" android:text="Lượng nước theo ngày" />
+    <com.aqua.water.ui.WaterChartView android:id="@+id/water_chart" android:layout_width="match_parent" android:layout_height="240dp" />
+    <TextView android:id="@+id/chart_goal" style="@style/Aqua.Caption" android:text="" />
+  </LinearLayout>
+  <LinearLayout style="@style/Aqua.Card" android:orientation="vertical">
+    <TextView android:id="@+id/stats_average" style="@style/Aqua.Metric" android:text="" />
+    <TextView android:id="@+id/stats_success" style="@style/Aqua.Text" android:text="" />
+    <TextView android:id="@+id/stats_total" style="@style/Aqua.Text" android:text="" />
+  </LinearLayout>
+</LinearLayout>
