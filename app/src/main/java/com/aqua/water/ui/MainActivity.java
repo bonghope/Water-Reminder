@@ -68,32 +68,54 @@ public class MainActivity extends Activity {
 
     private void show() {
         WaterView previousWater = waterView;
-        waterView = null;
+        if (previousWater != null) previousWater.setActive(false);
+        boolean dark = prefs.getBoolean("THEME_DARK", false);
+        setTheme(dark ? R.style.Theme_Aqua_Dark : R.style.Theme_Aqua);
         setContentView(R.layout.activity_main);
-        findViewById(R.id.content_frame).setOnApplyWindowInsetsListener((view, insets) -> {
-            int top = 0;
+        if (Build.VERSION.SDK_INT >= 30) getWindow().setDecorFitsSystemWindows(false);
+        getWindow().setStatusBarColor(Color.TRANSPARENT);
+        getWindow().setNavigationBarColor(Color.TRANSPARENT);
+        int flags = dark ? 0 : View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+        if (Build.VERSION.SDK_INT < 30) flags |= View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN;
+        getWindow().getDecorView().setSystemUiVisibility(flags);
+        View root = findViewById(R.id.content_root);
+        root.setOnApplyWindowInsetsListener((view, insets) -> {
             if (Build.VERSION.SDK_INT >= 30) {
                 android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars());
-                top = bars.top;
-            } else {
-                top = insets.getSystemWindowInsetTop();
-            }
-            view.setPadding(view.getPaddingLeft(), top, view.getPaddingRight(), view.getPaddingBottom());
+                view.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+            } else view.setPadding(insets.getSystemWindowInsetLeft(), insets.getSystemWindowInsetTop(),
+                    insets.getSystemWindowInsetRight(), insets.getSystemWindowInsetBottom());
             return insets;
         });
-        ViewGroup root = findViewById(R.id.content_frame);
-        root.removeAllViews();
-        getLayoutInflater().inflate(screens[tab], root, true);
-        getLayoutInflater().inflate(R.layout.view_navigation, root, true);
-        WaterView inflatedWater = findViewById(R.id.water_view);
-        if (inflatedWater != null) {
-            waterView = inflatedWater;
+        root.requestApplyInsets();
+        View body = findViewById(R.id.page_body);
+        ViewGroup.LayoutParams size = body.getLayoutParams();
+        size.width = tab == 0 ? ViewGroup.LayoutParams.MATCH_PARENT : Math.min(getResources().getDisplayMetrics().widthPixels,
+                (int) (600 * getResources().getDisplayMetrics().density));
+        body.setLayoutParams(size);
+        int horizontalPadding = (int) (20 * getResources().getDisplayMetrics().density);
+        int bodyPadding = tab == 0 ? 0 : horizontalPadding;
+        body.setPadding(bodyPadding, body.getPaddingTop(), bodyPadding, body.getPaddingBottom());
+        if (tab == 0) body.setPadding(0, 4, 0, 0);
+        View header = findViewById(R.id.page_header);
+        int headerPadding = tab == 0 ? horizontalPadding : 0;
+        header.setPadding(headerPadding, 0, headerPadding, 0);
+        FrameLayout content = findViewById(R.id.screen_container);
+        getLayoutInflater().inflate(screens[tab], content, true);
+        label(R.id.header_date, new SimpleDateFormat("dd MMM", new Locale("vi")).format(new Date()));
+        FrameLayout scene = findViewById(R.id.scene);
+        WaterView inflatedWater = findViewById(R.id.water);
+        waterView = null;
+        if (tab == 0) {
             if (previousWater != null) {
-                waterView.copyFrom(previousWater);
-            }
-            waterView.setData(total(), goal());
+                if (previousWater.getParent() != null) ((ViewGroup) previousWater.getParent()).removeView(previousWater);
+                scene.removeView(inflatedWater);
+                scene.addView(previousWater, 0, new FrameLayout.LayoutParams(-1, -1));
+                waterView = previousWater;
+            } else waterView = inflatedWater;
+            waterView.setProgress(total() / (float) goal());
             waterView.setActive(resumed);
-        } else if (inflatedWater != null) inflatedWater.setVisibility(View.GONE);
+        } else inflatedWater.setVisibility(View.GONE);
         for (int i = 0; i < navigation.length; i++) {
             final int next = i;
             TextView item = findViewById(navigation[i]);
@@ -134,7 +156,9 @@ public class MainActivity extends Activity {
             click(drinkIds[i], () -> { selectedDrink = category; updateDrinkSelection(); });
         }
         updateDrinkSelection();
-        click(R.id.btn100ml, () -> add(100)); click(R.id.btn200ml, () -> add(200));
+        click(R.id.btn100ml, () -> add(100));
+        click(R.id.btn200ml, () -> add(200));
+        click(R.id.btn300ml, () -> add(300));
         click(R.id.btn500ml, () -> add(500));
         click(R.id.btnCustom, () -> number("Lượng nước (ml)", 0, false));
         click(R.id.btnCloseCard, () -> { addCardVisible = false; updateAddCard(); });
@@ -154,22 +178,20 @@ public class MainActivity extends Activity {
     }
 
     private void updateAddCard() {
-        View card = findViewById(R.id.cardAddWater);
-        View reopen = findViewById(R.id.btnReopenCard);
-        if (card != null && reopen != null) {
-            card.setVisibility(addCardVisible ? View.VISIBLE : View.GONE);
-            reopen.setVisibility(addCardVisible ? View.GONE : View.VISIBLE);
-        }
+        boolean visible = tab == 0 && addCardVisible;
+        findViewById(R.id.add_water_overlay).setVisibility(visible ? View.VISIBLE : View.GONE);
+        findViewById(R.id.cardAddWater).setVisibility(addCardVisible ? View.VISIBLE : View.GONE);
+        findViewById(R.id.btnReopenCard).setVisibility(View.GONE);
     }
 
     private void add(int amount) {
         String[] types = {"Nước lọc", "Trà", "Nước ngọt", "Sữa"};
         db.add(amount, types[selectedDrink - 1]);
-        if (waterView != null) waterView.animateDrink();
+        Toast.makeText(this, "Thêm thành công!", Toast.LENGTH_SHORT).show();
         show();
     }
 
-    private void number(String title, int initial, boolean goal) {
+    private void number(String title, int initial, boolean isGoal) {
         EditText input = new EditText(this);
         input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
         if (initial > 0) input.setText(String.valueOf(initial));
@@ -182,20 +204,23 @@ public class MainActivity extends Activity {
                 .setNegativeButton("Hủy", null).setPositiveButton("Lưu", null).create();
         dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
             try {
-                int value = Integer.parseInt(input.getText().toString().trim());
-                if (value <= 0) throw new NumberFormatException();
-                if (goal) prefs.edit().putInt("WATER_GOAL", value).apply(); else add(value);
-                dialog.dismiss(); show();
+                int amount = Integer.parseInt(input.getText().toString().trim());
+                if (amount <= 0) throw new NumberFormatException();
+                if (isGoal) { prefs.edit().putInt("WATER_GOAL", amount).apply(); show(); }
+                else add(amount);
+                dialog.dismiss();
             } catch (NumberFormatException e) { input.setError("Nhập số nguyên lớn hơn 0"); }
         }));
         showRoundedDialog(dialog);
     }
 
     private void showRoundedDialog(AlertDialog dialog) {
-        if (dialog.getWindow() != null) {
-            dialog.getWindow().setBackgroundDrawableResource(R.drawable.bg_card);
-        }
         dialog.show();
+        android.view.Window window = dialog.getWindow();
+        if (window != null) {
+            window.setBackgroundDrawable(getDrawable(R.drawable.bg_card));
+            window.getDecorView().setClipToOutline(true);
+        }
     }
 
     private void bindHistory() {

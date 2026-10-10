@@ -1,5 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <application android:theme="@style/Theme.Aqua" android:label="Aqua • Uống nước" android:allowBackup="false" android:supportsRtl="true">
         <activity android:name="com.aqua.water.ui.MainActivity" android:exported="true">
