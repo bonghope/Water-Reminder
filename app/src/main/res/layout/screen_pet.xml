@@ -3,7 +3,7 @@
   <TextView style="@style/Aqua.Title" android:text="Hành trình của bạn" />
   <TextView style="@style/Aqua.Caption" android:text="Chăm mình khỏe, nuôi giọt nước lớn lên." />
   <LinearLayout style="@style/Aqua.Card" android:orientation="vertical">
-    <com.aqua.water.ui.PetView android:layout_width="match_parent" android:layout_height="240dp" />
+    <com.aqua.water.ui.PetView android:id="@+id/pet_mascot" android:layout_width="match_parent" android:layout_height="240dp" />
     <TextView android:id="@+id/pet_name" style="@style/Aqua.Metric" android:text="" />
     <TextView android:id="@+id/pet_level" style="@style/Aqua.Caption" android:text="" />
     <ProgressBar android:id="@+id/pet_progress" style="?android:attr/progressBarStyleHorizontal" android:layout_width="match_parent" android:layout_height="wrap_content" android:progressTint="@color/aqua_blue" />

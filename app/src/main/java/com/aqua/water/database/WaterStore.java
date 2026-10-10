@@ -36,9 +36,7 @@ public class WaterStore {
             throw new android.database.SQLException("Không thể lưu bản ghi");
     }
     public int total(String date) {
-        int total = 0;
-        for (WaterLog log : backend.getLogsByDate(date)) total += log.getHydrationAmount();
-        return total;
+        return backend.getWaterToday(date);
     }
     public Cursor logs(boolean week) {
         MatrixCursor cursor = new MatrixCursor(new String[]{"id", "amount_ml", "drink_type", "timestamp"});
