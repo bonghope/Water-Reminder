@@ -3,6 +3,9 @@ package com.aqua.water.ui;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.SharedPreferences;
+import android.content.Intent;
+import android.net.Uri;
+import android.provider.Settings;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Color;
@@ -15,6 +18,7 @@ import android.widget.*;
 import com.aqua.water.R;
 import com.aqua.water.database.WaterStore;
 import com.aqua.water.services.ReminderReceiver;
+import com.example.waterreminder.database.AppConfigManager;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -24,6 +28,7 @@ import java.util.Locale;
 public class MainActivity extends Activity {
     private WaterStore db;
     private SharedPreferences prefs;
+    private AppConfigManager config;
     private WaterView waterView;
     private boolean resumed, week, month;
     private int tab;
@@ -36,6 +41,7 @@ public class MainActivity extends Activity {
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         db = new WaterStore(this);
+        config = new AppConfigManager(this);
         prefs = getSharedPreferences("AppConfig", 0);
         if (state != null) {
             tab = Math.max(0, Math.min(screens.length - 1, state.getInt("tab", 0)));
@@ -47,7 +53,11 @@ public class MainActivity extends Activity {
         show();
     }
 
-    @Override protected void onResume() { super.onResume(); resumed = true; show(); }
+    @Override protected void onResume() {
+        super.onResume(); resumed = true;
+        ReminderReceiver.ensureScheduled(this);
+        show();
+    }
     @Override protected void onPause() {
         resumed = false;
         if (waterView != null) waterView.setActive(false);
@@ -206,7 +216,7 @@ public class MainActivity extends Activity {
             try {
                 int amount = Integer.parseInt(input.getText().toString().trim());
                 if (amount <= 0) throw new NumberFormatException();
-                if (isGoal) { prefs.edit().putInt("WATER_GOAL", amount).apply(); show(); }
+                if (isGoal) { config.setWaterGoal(amount); show(); }
                 else add(amount);
                 dialog.dismiss();
             } catch (NumberFormatException e) { input.setError("Nhập số nguyên lớn hơn 0"); }
@@ -379,9 +389,32 @@ public class MainActivity extends Activity {
             if (on && Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
                 reminder.setChecked(false); requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 10); return;
             }
-            prefs.edit().putBoolean("REMINDER_IS_ON", on).apply(); ReminderReceiver.schedule(this);
+            config.setReminderOn(on);
+            if (on) checkReminderPermissions();
         });
         bindInterval();
+    }
+
+    private void checkReminderPermissions() {
+        if (!ReminderReceiver.notificationsAllowed(this)) {
+            Intent settings = Build.VERSION.SDK_INT >= 26
+                    ? new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName())
+                    : new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getPackageName()));
+            offerPermissionSettings("Thông báo đang bị chặn", "Cho phép Aqua gửi thông báo trong cài đặt hệ thống.", settings);
+        } else if (Build.VERSION.SDK_INT >= 31 && !ReminderReceiver.exactAlarmsAllowed(this)) {
+            offerPermissionSettings("Nhắc nhở đúng giờ", "Cho phép báo thức chính xác để nhắc đúng giờ. Nếu bỏ qua, Android có thể gửi nhắc muộn hơn.",
+                    new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + getPackageName())));
+        }
+    }
+
+    private void offerPermissionSettings(String title, String message, Intent settings) {
+        showRoundedDialog(new AlertDialog.Builder(this).setTitle(title).setMessage(message)
+                .setNegativeButton("Để sau", null).setPositiveButton("Mở cài đặt", (dialog, which) -> {
+                    try { startActivity(settings); }
+                    catch (android.content.ActivityNotFoundException e) {
+                        Toast.makeText(this, "Mở Cài đặt hệ thống → Ứng dụng → Aqua để cấp quyền", Toast.LENGTH_LONG).show();
+                    }
+                }).create());
     }
 
     private void bindInterval() {
@@ -390,7 +423,7 @@ public class MainActivity extends Activity {
         int[] minutes = {60, 90, 120};
         for (int i = 0; i < ids.length; i++) {
             final int value = minutes[i];
-            click(ids[i], () -> { prefs.edit().putInt("REMINDER_INTERVAL", value).apply(); ReminderReceiver.schedule(this); show(); });
+            click(ids[i], () -> { config.setReminderInterval(value); show(); });
         }
     }
 
@@ -398,7 +431,7 @@ public class MainActivity extends Activity {
         label(R.id.goal_button, goal() + " ml ›");
         click(R.id.goal_button, () -> number("Mục tiêu hàng ngày (ml)", goal(), true));
         Switch theme = findViewById(R.id.theme_switch); theme.setChecked(prefs.getBoolean("THEME_DARK", false));
-        theme.setOnCheckedChangeListener((button, dark) -> { prefs.edit().putBoolean("THEME_DARK", dark).apply(); show(); });
+        theme.setOnCheckedChangeListener((button, dark) -> { config.setThemeDark(dark); show(); });
         bindInterval();
     }
 
@@ -406,8 +439,12 @@ public class MainActivity extends Activity {
         super.onRequestPermissionsResult(request, permissions, results);
         if (request != 10) return;
         if (results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED) {
-            prefs.edit().putBoolean("REMINDER_IS_ON", true).apply(); ReminderReceiver.schedule(this);
-        } else Toast.makeText(this, "Cần quyền thông báo để bật nhắc nhở", Toast.LENGTH_SHORT).show();
+            config.setReminderOn(true);
+            checkReminderPermissions();
+        } else {
+            config.setReminderOn(false);
+            checkReminderPermissions();
+        }
         show();
     }
 }
