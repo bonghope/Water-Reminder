@@ -15,9 +15,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final int DATABASE_VERSION = 1;
 
     public static final String TABLE_WATER_LOG = "WaterLog";
+    public static final String TABLE_NAME = TABLE_WATER_LOG;
+
     public static final String COLUMN_ID = "id";
     public static final String COLUMN_CATEGORY_ID = "category_id";
     public static final String COLUMN_RAW_AMOUNT = "raw_amount";
+    public static final String COLUMN_AMOUNT = "raw_amount";
     public static final String COLUMN_HYDRATION_AMOUNT = "hydration_amount";
     public static final String COLUMN_TIMESTAMP = "timestamp";
     public static final String COLUMN_DATE_STRING = "date_string";
@@ -44,6 +47,36 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         onCreate(db);
     }
 
+    // Hàm gọi tổng nước uống hôm nay cho M2.1 (gộp từ nhacuongnuoc)
+    public int getWaterToday(String dateString) {
+        int totalWater = 0;
+        SQLiteDatabase db = this.getReadableDatabase();
+        String query = "SELECT SUM(" + COLUMN_HYDRATION_AMOUNT + ") FROM " + TABLE_WATER_LOG + " WHERE " + COLUMN_DATE_STRING + " = ?";
+        Cursor cursor = db.rawQuery(query, new String[]{dateString});
+
+        if (cursor.moveToFirst()) {
+            totalWater = cursor.getInt(0);
+        }
+        cursor.close();
+        db.close();
+        return totalWater;
+    }
+
+    // Hàm gọi tổng lượng nước thô (ml) theo ngày
+    public int getRawWaterToday(String dateString) {
+        int totalWater = 0;
+        SQLiteDatabase db = this.getReadableDatabase();
+        String query = "SELECT SUM(" + COLUMN_RAW_AMOUNT + ") FROM " + TABLE_WATER_LOG + " WHERE " + COLUMN_DATE_STRING + " = ?";
+        Cursor cursor = db.rawQuery(query, new String[]{dateString});
+
+        if (cursor.moveToFirst()) {
+            totalWater = cursor.getInt(0);
+        }
+        cursor.close();
+        db.close();
+        return totalWater;
+    }
+
     public long insertLog(WaterLog log, String dateString) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
@@ -56,6 +89,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         long id = db.insert(TABLE_WATER_LOG, null, values);
         db.close();
         return id;
+    }
+
+    public long insertLog(int amount, String dateString) {
+        long time = System.currentTimeMillis();
+        WaterLog log = new WaterLog(1, amount, amount, time);
+        return insertLog(log, dateString);
     }
 
     public List<WaterLog> getLogsByDate(String dateString) {
