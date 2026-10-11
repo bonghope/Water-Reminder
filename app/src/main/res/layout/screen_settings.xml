@@ -13,7 +13,7 @@
     <TextView android:id="@+id/goal_button" style="@style/Aqua.Button" android:text="" />
   </LinearLayout>
 
-  <!-- Card 2: Giao diện hiển thị / Chế độ tối (nằm ngay trên Aqua dưới cùng) -->
+  <!-- Card 3: Giao diện hiển thị / Chế độ tối (nằm ngay trên Aqua dưới cùng) -->
   <LinearLayout style="@style/Aqua.Card" android:orientation="vertical">
     <TextView style="@style/Aqua.Text" android:text="Giao diện hiển thị" android:textStyle="bold" />
     <LinearLayout

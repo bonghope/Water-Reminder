@@ -26,26 +26,16 @@
         android:layout_marginEnd="16dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:background="@drawable/bg_floating_streak"
-        android:paddingLeft="12dp"
-        android:paddingRight="14dp"
-        android:paddingTop="7dp"
-        android:paddingBottom="7dp"
-        android:elevation="16dp"
         android:clickable="true"
         android:focusable="true">
-      <TextView
-          android:id="@+id/header_streak_icon"
-          android:layout_width="wrap_content"
-          android:layout_height="wrap_content"
-          android:text="🔥"
-          android:textSize="22sp" />
+      <com.aqua.water.ui.FlameView android:id="@+id/header_streak_icon" android:layout_width="48dp" android:layout_height="48dp" />
       <TextView
           android:id="@+id/header_streak_text"
+          android:visibility="gone"
           android:layout_width="wrap_content"
           android:layout_height="wrap_content"
           android:text="0"
-          android:textColor="#FF6D00"
+          android:textColor="#ffffff"
           android:textSize="16sp"
           android:textStyle="bold"
           android:layout_marginStart="4dp" />
