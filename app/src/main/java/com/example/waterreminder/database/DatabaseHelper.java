@@ -15,7 +15,8 @@ import java.util.Locale;
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "WaterReminder.db";
-    private static final int DATABASE_VERSION = 1;
+    // Never lower this version after a release; add migrations for future schema changes.
+    private static final int DATABASE_VERSION = 2;
 
     public static final String TABLE_WATER_LOG = "WaterLog";
     public static final String TABLE_NAME = TABLE_WATER_LOG;
@@ -51,8 +52,39 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_WATER_LOG);
-        onCreate(db);
+        if (oldVersion < 2) {
+            java.util.Set<String> columns = new java.util.HashSet<>();
+            try (Cursor cursor = db.rawQuery("PRAGMA table_info(WaterLog)", null)) {
+                while (cursor.moveToNext()) columns.add(cursor.getString(cursor.getColumnIndexOrThrow("name")));
+            }
+            if (columns.isEmpty()) {
+                onCreate(db);
+                return;
+            }
+            addColumnIfMissing(db, columns, "category_id", "INTEGER");
+            addColumnIfMissing(db, columns, "raw_amount", "INTEGER");
+            addColumnIfMissing(db, columns, "amount_ml", "INTEGER");
+            addColumnIfMissing(db, columns, "hydration_amount", "INTEGER");
+            addColumnIfMissing(db, columns, "drink_type", "TEXT");
+            addColumnIfMissing(db, columns, "timestamp", "INTEGER");
+            addColumnIfMissing(db, columns, "date_string", "TEXT");
+            addColumnIfMissing(db, columns, "created_at", "TEXT");
+
+            // Preserve existing values and fill the fields absent in older releases.
+            db.execSQL("UPDATE WaterLog SET raw_amount = COALESCE(raw_amount, amount_ml, 0)");
+            db.execSQL("UPDATE WaterLog SET amount_ml = COALESCE(amount_ml, raw_amount)");
+            db.execSQL("UPDATE WaterLog SET category_id = COALESCE(category_id, CASE drink_type WHEN 'Trà' THEN 2 WHEN 'Cà phê' THEN 2 WHEN 'Trà / Cà phê' THEN 2 WHEN 'Trà / Cafe' THEN 2 WHEN 'Nước ngọt' THEN 3 WHEN 'Sữa' THEN 4 ELSE 1 END)");
+            db.execSQL("UPDATE WaterLog SET hydration_amount = COALESCE(hydration_amount, CASE category_id WHEN 2 THEN CAST(raw_amount * 0.8 AS INTEGER) WHEN 3 THEN CAST(raw_amount * 0.7 AS INTEGER) ELSE raw_amount END)");
+            db.execSQL("UPDATE WaterLog SET drink_type = COALESCE(drink_type, CASE category_id WHEN 2 THEN 'Trà / Cà phê' WHEN 3 THEN 'Nước ngọt' WHEN 4 THEN 'Sữa' ELSE 'Nước lọc' END)");
+            db.execSQL("UPDATE WaterLog SET created_at = COALESCE(created_at, datetime(timestamp / 1000, 'unixepoch', 'localtime'))");
+        }
+    }
+
+    private void addColumnIfMissing(SQLiteDatabase db, java.util.Set<String> columns, String name, String type) {
+        if (!columns.contains(name)) {
+            db.execSQL("ALTER TABLE " + TABLE_WATER_LOG + " ADD COLUMN " + name + " " + type);
+            columns.add(name);
+        }
     }
 
     // Hàm gọi tổng nước uống hôm nay cho M2.1 (gộp từ nhacuongnuoc)

@@ -15,8 +15,6 @@ import android.view.View;
 import android.view.MotionEvent;
 import android.view.HapticFeedbackConstants;
 import android.view.ViewGroup;
-import android.view.Gravity;
-import android.util.TypedValue;
 import android.view.WindowInsets;
 import android.widget.*;
 import com.aqua.water.R;
@@ -136,47 +134,12 @@ public class MainActivity extends Activity {
         int headerPadding = tab == 0 ? horizontalPadding : 0;
         header.setPadding(headerPadding, 0, headerPadding, 0);
 
-        // Draggable Floating Streak Flame & Tier Badge
+        // Draggable flame follows the current streak milestone
         StreakManager.StreakInfo headerStreak = streakManager.getStreakInfo(goal());
-        StreakManager.FlameTier currentTier = StreakManager.getFlameTier(headerStreak.currentStreak);
-
-        TextView headerStreakIcon = findViewById(R.id.header_streak_icon);
-        if (headerStreakIcon != null) {
-            headerStreakIcon.setText(currentTier.icon);
-            headerStreakIcon.setTextSize(currentTier.badgeIconSp);
-            if (headerStreak.isGoalAchievedToday) {
-                headerStreakIcon.animate().cancel();
-                android.animation.ObjectAnimator pulseX = android.animation.ObjectAnimator.ofFloat(headerStreakIcon, "scaleX", 1.0f, 1.16f, 1.0f);
-                android.animation.ObjectAnimator pulseY = android.animation.ObjectAnimator.ofFloat(headerStreakIcon, "scaleY", 1.0f, 1.16f, 1.0f);
-                pulseX.setDuration(950);
-                pulseY.setDuration(950);
-                pulseX.setRepeatCount(android.animation.ValueAnimator.INFINITE);
-                pulseY.setRepeatCount(android.animation.ValueAnimator.INFINITE);
-                pulseX.setRepeatMode(android.animation.ValueAnimator.REVERSE);
-                pulseY.setRepeatMode(android.animation.ValueAnimator.REVERSE);
-                pulseX.start();
-                pulseY.start();
-            } else {
-                headerStreakIcon.animate().cancel();
-                headerStreakIcon.setScaleX(1.0f);
-                headerStreakIcon.setScaleY(1.0f);
-            }
-        }
+        setFlame(R.id.header_streak_icon, headerStreak.currentStreak);
         label(R.id.header_streak_text, String.valueOf(headerStreak.currentStreak));
-        TextView headerStreakText = findViewById(R.id.header_streak_text);
-        if (headerStreakText != null) {
-            headerStreakText.setTextColor(Color.parseColor(currentTier.startColor));
-        }
         View floatingBadge = findViewById(R.id.floating_streak_badge);
         if (floatingBadge != null) {
-            android.graphics.drawable.GradientDrawable badgeBg = new android.graphics.drawable.GradientDrawable();
-            badgeBg.setCornerRadius(24 * getResources().getDisplayMetrics().density);
-            badgeBg.setColor(Color.WHITE);
-            badgeBg.setStroke((int) (2f * getResources().getDisplayMetrics().density), Color.parseColor(currentTier.startColor));
-            floatingBadge.setBackground(badgeBg);
-            floatingBadge.setAlpha(headerStreak.isGoalAchievedToday ? 1.0f : 0.92f);
-            floatingBadge.setScaleX(currentTier.scaleMultiplier);
-            floatingBadge.setScaleY(currentTier.scaleMultiplier);
             if (floatingStreakX >= 0 && floatingStreakY >= 0) {
                 floatingBadge.setX(floatingStreakX);
                 floatingBadge.setY(floatingStreakY);
@@ -290,11 +253,9 @@ public class MainActivity extends Activity {
 
         label(R.id.home_percent, Math.round(percentage) + "%");
         label(R.id.home_amount, amount + " / " + waterGoal + " ml");
-        if (remaining <= 0) {
-            label(R.id.home_remaining, "Đã hoàn thành mục tiêu!");
-        } else {
-            label(R.id.home_remaining, "Còn " + remaining + " ml để hoàn thành mục tiêu");
-        }
+        label(R.id.home_remaining, amount >= waterGoal
+                ? "Đã hoàn thành mục tiêu ngày hôm nay"
+                : "Còn " + remaining + " ml để hoàn thành mục tiêu");
 
 
         int[] drinkIds = {R.id.ivWater, R.id.ivTea, R.id.ivSweet, R.id.ivMilk};
@@ -326,72 +287,9 @@ public class MainActivity extends Activity {
 
     private void updateAddCard() {
         boolean visible = tab == 0 && addCardVisible;
-        View overlay = findViewById(R.id.add_water_overlay);
-        if (overlay != null) overlay.setVisibility(visible ? View.VISIBLE : View.GONE);
-        View card = findViewById(R.id.cardAddWater);
-        if (card != null) card.setVisibility(addCardVisible ? View.VISIBLE : View.GONE);
-        View reopen = findViewById(R.id.btnReopenCard);
-        if (reopen != null) reopen.setVisibility(View.GONE);
-
-        View homeBox = findViewById(R.id.home_progress_box);
-        if (homeBox != null && tab == 0) {
-            TextView tvTitle = findViewById(R.id.home_title);
-            TextView tvPercent = findViewById(R.id.home_percent);
-            TextView tvAmount = findViewById(R.id.home_amount);
-            TextView tvRemaining = findViewById(R.id.home_remaining);
-            float density = getResources().getDisplayMetrics().density;
-
-            if (addCardVisible) {
-                // Đang mở thêm nước: phần chữ góc trái bên trên, cỡ chữ bình thường
-                homeBox.animate().translationY(0f).setDuration(220).start();
-                if (homeBox instanceof LinearLayout) {
-                    ((LinearLayout) homeBox).setGravity(Gravity.START);
-                }
-                if (tvTitle != null) {
-                    tvTitle.setGravity(Gravity.START);
-                    tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-                }
-                if (tvPercent != null) {
-                    tvPercent.setGravity(Gravity.START);
-                    tvPercent.setTextSize(TypedValue.COMPLEX_UNIT_SP, 44);
-                }
-                if (tvAmount != null) {
-                    tvAmount.setGravity(Gravity.START);
-                    tvAmount.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
-                }
-                if (tvRemaining != null) {
-                    tvRemaining.setGravity(Gravity.START);
-                    tvRemaining.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-                }
-            } else {
-                // Tắt thêm nước: chuyển xuống giữa, cỡ chữ to lên 1 chút
-                View pageScroll = findViewById(R.id.page_scroll);
-                float targetY = 160f * density;
-                if (pageScroll != null && pageScroll.getHeight() > 0) {
-                    targetY = Math.max(120f * density, (pageScroll.getHeight() - homeBox.getHeight()) * 0.42f);
-                }
-                homeBox.animate().translationY(targetY).setDuration(220).start();
-                if (homeBox instanceof LinearLayout) {
-                    ((LinearLayout) homeBox).setGravity(Gravity.CENTER_HORIZONTAL);
-                }
-                if (tvTitle != null) {
-                    tvTitle.setGravity(Gravity.CENTER_HORIZONTAL);
-                    tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
-                }
-                if (tvPercent != null) {
-                    tvPercent.setGravity(Gravity.CENTER_HORIZONTAL);
-                    tvPercent.setTextSize(TypedValue.COMPLEX_UNIT_SP, 56);
-                }
-                if (tvAmount != null) {
-                    tvAmount.setGravity(Gravity.CENTER_HORIZONTAL);
-                    tvAmount.setTextSize(TypedValue.COMPLEX_UNIT_SP, 24);
-                }
-                if (tvRemaining != null) {
-                    tvRemaining.setGravity(Gravity.CENTER_HORIZONTAL);
-                    tvRemaining.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-                }
-            }
-        }
+        findViewById(R.id.add_water_overlay).setVisibility(visible ? View.VISIBLE : View.GONE);
+        findViewById(R.id.cardAddWater).setVisibility(addCardVisible ? View.VISIBLE : View.GONE);
+        findViewById(R.id.btnReopenCard).setVisibility(View.GONE);
     }
 
     private void add(int amount) {
@@ -401,90 +299,44 @@ public class MainActivity extends Activity {
         db.add(amount, types[selectedDrink - 1]);
         int after = total();
 
-        // Giữ mở khung thêm nước theo yêu cầu người dùng
         addCardVisible = true;
         if (before < target && after >= target) {
             StreakManager.StreakInfo newStreak = streakManager.getStreakInfo(target);
             showCelebrationDialog(newStreak);
         } else {
-            Toast.makeText(this, "Đã thêm " + amount + " ml!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Thêm " + amount + " ml thành công!", Toast.LENGTH_SHORT).show();
         }
         show();
     }
 
-    private void showCelebrationDialog(StreakManager.StreakInfo info) {
-        StreakManager.FlameTier tier = StreakManager.getFlameTier(info.currentStreak);
-        boolean isMilestone = StreakManager.isMilestone(info.currentStreak);
-
+        private void showCelebrationDialog(StreakManager.StreakInfo info) {
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setGravity(android.view.Gravity.CENTER_HORIZONTAL);
         int padding = (int) (22 * getResources().getDisplayMetrics().density);
         layout.setPadding(padding, padding, padding, padding);
 
-        // Animated Flame Circle Box (Kích thước to dần theo cấp độ)
-        FrameLayout flameContainer = new FrameLayout(this);
-        int flameSize = (int) (tier.dialogSizeDp * getResources().getDisplayMetrics().density);
-        LinearLayout.LayoutParams fcLp = new LinearLayout.LayoutParams(flameSize, flameSize);
-        fcLp.gravity = android.view.Gravity.CENTER_HORIZONTAL;
-        fcLp.bottomMargin = (int) (14 * getResources().getDisplayMetrics().density);
-        flameContainer.setLayoutParams(fcLp);
-
-        android.graphics.drawable.GradientDrawable flameBg = new android.graphics.drawable.GradientDrawable();
-        flameBg.setShape(android.graphics.drawable.GradientDrawable.OVAL);
-        flameBg.setColors(new int[]{Color.parseColor(tier.startColor), Color.parseColor(tier.endColor)});
-        flameBg.setStroke((int) (3f * getResources().getDisplayMetrics().density), Color.parseColor(tier.strokeColor));
-        flameContainer.setBackground(flameBg);
-
-        TextView tvFire = new TextView(this);
-        tvFire.setText(tier.icon);
-        tvFire.setTextSize(tier.dialogIconSp);
-        tvFire.setGravity(android.view.Gravity.CENTER);
-        FrameLayout.LayoutParams fLp = new FrameLayout.LayoutParams(-1, -1);
-        fLp.gravity = android.view.Gravity.CENTER;
-        tvFire.setLayoutParams(fLp);
-        flameContainer.addView(tvFire);
-        layout.addView(flameContainer);
-
-        // Animate the flame icon (burst bounce & rotational wobble)
-        flameContainer.setScaleX(0.3f);
-        flameContainer.setScaleY(0.3f);
-        flameContainer.animate()
-                .scaleX(tier.scaleMultiplier * 1.15f).scaleY(tier.scaleMultiplier * 1.15f)
-                .setDuration(350)
-                .withEndAction(() -> {
-                    flameContainer.animate().scaleX(tier.scaleMultiplier).scaleY(tier.scaleMultiplier).setDuration(180).start();
-                    tvFire.animate().rotation(15f).setDuration(100).withEndAction(() ->
-                            tvFire.animate().rotation(-15f).setDuration(100).withEndAction(() ->
-                                    tvFire.animate().rotation(0f).setDuration(100).start()
-                            ).start()
-                    ).start();
-                }).start();
-
         TextView tvTitle = new TextView(this);
-        if (isMilestone) {
-            tvTitle.setText("🎉 MỞ KHÓA " + tier.name.toUpperCase() + "!");
-            tvTitle.setTextColor(Color.parseColor(tier.startColor));
-        } else {
-            tvTitle.setText("Hoàn thành mục tiêu hôm nay!");
-            tvTitle.setTextColor(Color.parseColor("#ff5722"));
-        }
+        tvTitle.setText("Hoàn thành mục tiêu hôm nay!");
         tvTitle.setTextSize(18);
+        tvTitle.setTextColor(Color.parseColor("#ff5722"));
         tvTitle.setTypeface(null, android.graphics.Typeface.BOLD);
         tvTitle.setGravity(android.view.Gravity.CENTER);
         layout.addView(tvTitle);
+        FlameView celebrationFlame = new FlameView(this);
+        celebrationFlame.setStreak(info.currentStreak);
+        int flameSize = (int) (90 * getResources().getDisplayMetrics().density);
+        LinearLayout.LayoutParams flameParams = new LinearLayout.LayoutParams(flameSize, flameSize);
+        flameParams.gravity = android.view.Gravity.CENTER_HORIZONTAL;
+        layout.addView(celebrationFlame, flameParams);
 
         boolean dark = prefs.getBoolean("THEME_DARK", false);
         int primaryColor = dark ? Color.parseColor("#E4F5FF") : Color.parseColor("#183E64");
 
         TextView tvMsg = new TextView(this);
-        StringBuilder sb = new StringBuilder();
-        sb.append("\nChuỗi \"").append(streakManager.getStreakName()).append("\" đạt ").append(info.currentStreak).append(" ngày liên tiếp.\n");
-        if (isMilestone) {
-            sb.append("\n🔥 ").append(tier.effectDescription).append("\n");
-        }
-        sb.append("\nThú cưng đã đạt Cấp 4: Chiến Binh Nước.\n\nHãy tiếp tục duy trì vào ngày mai nhé.");
-        tvMsg.setText(sb.toString());
+        tvMsg.setText("\nChuỗi \"" + streakManager.getStreakName() + "\" đạt " + info.currentStreak + " ngày.\n\n"
+                + StreakFlame.name(info.currentStreak) + "\n\nThú cưng đã đạt "
+                + PetLevels.title(PetLevels.level(info.todayIntake, info.dailyGoal))
+                + ".\n\nHãy tiếp tục duy trì vào ngày mai nhé.");
         tvMsg.setTextSize(14);
         tvMsg.setTextColor(primaryColor);
         tvMsg.setGravity(android.view.Gravity.CENTER);
@@ -492,7 +344,7 @@ public class MainActivity extends Activity {
 
         AlertDialog dialog = new AlertDialog.Builder(this)
                 .setView(layout)
-                .setPositiveButton("Tuyệt vời", (d, w) -> d.dismiss())
+                .setPositiveButton("Đồng ý", (d, w) -> d.dismiss())
                 .create();
         showRoundedDialog(dialog);
     }
@@ -504,8 +356,7 @@ public class MainActivity extends Activity {
         int accentColor = dark ? Color.parseColor("#38BDF8") : Color.parseColor("#0284C7");
         int dimColor = dark ? Color.parseColor("#64748B") : Color.parseColor("#94A3B8");
 
-        StreakManager.FlameTier currentTier = StreakManager.getFlameTier(info.currentStreak);
-        StreakManager.FlameTier nextTier = StreakManager.getNextFlameTier(info.currentStreak);
+        int nextMilestone = StreakFlame.nextMilestone(info.currentStreak);
 
         ScrollView scroll = new ScrollView(this);
         LinearLayout layout = new LinearLayout(this);
@@ -539,63 +390,11 @@ public class MainActivity extends Activity {
         nameRow.setOnClickListener(v -> promptChangeStreakName(info));
         layout.addView(nameRow);
 
-        // 2. Biểu tượng ngọn lửa lớn với kích thước to dần & gradient đổi màu theo cấp
-        FrameLayout fireBox = new FrameLayout(this);
-        int boxSize = (int) (currentTier.dialogSizeDp * getResources().getDisplayMetrics().density);
-        LinearLayout.LayoutParams fbLp = new LinearLayout.LayoutParams(boxSize, boxSize);
-        fbLp.gravity = android.view.Gravity.CENTER_HORIZONTAL;
-        fbLp.bottomMargin = (int) (6 * getResources().getDisplayMetrics().density);
-        fireBox.setLayoutParams(fbLp);
-
-        android.graphics.drawable.GradientDrawable fbBg = new android.graphics.drawable.GradientDrawable();
-        fbBg.setShape(android.graphics.drawable.GradientDrawable.OVAL);
-        fbBg.setColors(new int[]{Color.parseColor(currentTier.startColor), Color.parseColor(currentTier.endColor)});
-        fbBg.setStroke((int) (3 * getResources().getDisplayMetrics().density), Color.parseColor(currentTier.strokeColor));
-        fireBox.setBackground(fbBg);
-
-        TextView tvFire = new TextView(this);
-        tvFire.setText(currentTier.icon);
-        tvFire.setTextSize(currentTier.dialogIconSp);
-        tvFire.setGravity(android.view.Gravity.CENTER);
-        FrameLayout.LayoutParams fLp = new FrameLayout.LayoutParams(-1, -1);
-        fLp.gravity = android.view.Gravity.CENTER;
-        tvFire.setLayoutParams(fLp);
-        fireBox.addView(tvFire);
-
-        // Hiệu ứng ngọn lửa bùng cháy liên tục (TikTok flame pulsing)
-        android.animation.ObjectAnimator fbPulseX = android.animation.ObjectAnimator.ofFloat(tvFire, "scaleX", 1.0f, 1.15f, 1.0f);
-        android.animation.ObjectAnimator fbPulseY = android.animation.ObjectAnimator.ofFloat(tvFire, "scaleY", 1.0f, 1.15f, 1.0f);
-        fbPulseX.setDuration(900);
-        fbPulseY.setDuration(900);
-        fbPulseX.setRepeatCount(android.animation.ValueAnimator.INFINITE);
-        fbPulseY.setRepeatCount(android.animation.ValueAnimator.INFINITE);
-        fbPulseX.setRepeatMode(android.animation.ValueAnimator.REVERSE);
-        fbPulseY.setRepeatMode(android.animation.ValueAnimator.REVERSE);
-        fbPulseX.start();
-        fbPulseY.start();
-
-        fireBox.setClickable(true);
-        fireBox.setFocusable(true);
-        fireBox.setOnClickListener(v -> {
-            v.animate().scaleX(1.25f).scaleY(1.25f).setDuration(120).withEndAction(() ->
-                    v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(120).start()
-            ).start();
-            tvFire.animate().rotation(20f).setDuration(100).withEndAction(() ->
-                    tvFire.animate().rotation(-20f).setDuration(100).withEndAction(() ->
-                            tvFire.animate().rotation(0f).setDuration(100).start()
-                    ).start()
-            ).start();
-            Toast.makeText(this, currentTier.name + " (Cấp " + currentTier.level + ") • " + currentTier.effectDescription, Toast.LENGTH_SHORT).show();
-        });
-        layout.addView(fireBox);
-
-        TextView tvTierLabel = new TextView(this);
-        tvTierLabel.setText(currentTier.name + " • Cấp " + currentTier.level);
-        tvTierLabel.setTextSize(13);
-        tvTierLabel.setTypeface(null, android.graphics.Typeface.BOLD);
-        tvTierLabel.setTextColor(Color.parseColor(currentTier.startColor));
-        tvTierLabel.setGravity(android.view.Gravity.CENTER);
-        layout.addView(tvTierLabel);
+        // 2. Biểu tượng ngọn lửa lớn
+        FlameView tvFire = new FlameView(this);
+        tvFire.setStreak(info.currentStreak);
+        int flameSize = (int) (100 * getResources().getDisplayMetrics().density);
+        layout.addView(tvFire, new LinearLayout.LayoutParams(flameSize, flameSize));
 
         // 3. Số ngày chuỗi to rõ kiểu TikTok
         TextView tvCount = new TextView(this);
@@ -645,77 +444,15 @@ public class MainActivity extends Activity {
         tvStatusPill.setBackground(statusBg);
         layout.addView(tvStatusPill);
 
-        // 5. Mốc hiệu ứng ngọn lửa (3, 7, 14, 30 ngày...)
-        TextView tvNextMilestone = new TextView(this);
-        if (nextTier != null) {
-            int remainingDays = nextTier.minDays - info.currentStreak;
-            tvNextMilestone.setText("Mốc tiếp theo: " + nextTier.minDays + " ngày (mở khóa " + nextTier.name + " - còn " + remainingDays + " ngày)");
-        } else {
-            tvNextMilestone.setText("Đã chinh phục mọi hiệu ứng ngọn lửa! 👑");
-        }
-        tvNextMilestone.setTextSize(12);
-        tvNextMilestone.setTypeface(null, android.graphics.Typeface.BOLD);
-        tvNextMilestone.setTextColor(accentColor);
-        tvNextMilestone.setGravity(android.view.Gravity.CENTER);
-        tvNextMilestone.setPadding(0, (int) (16 * getResources().getDisplayMetrics().density), 0, (int) (8 * getResources().getDisplayMetrics().density));
-        layout.addView(tvNextMilestone);
-
-        HorizontalScrollView hScroll = new HorizontalScrollView(this);
-        hScroll.setHorizontalScrollBarEnabled(false);
-        LinearLayout milestonesRow = new LinearLayout(this);
-        milestonesRow.setOrientation(LinearLayout.HORIZONTAL);
-        milestonesRow.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        milestonesRow.setPadding((int) (4 * getResources().getDisplayMetrics().density), (int) (4 * getResources().getDisplayMetrics().density), (int) (4 * getResources().getDisplayMetrics().density), (int) (10 * getResources().getDisplayMetrics().density));
-
-        for (StreakManager.FlameTier ft : StreakManager.getAllFlameTiers()) {
-            if (ft.minDays == 0) continue; // Skip tier 0 in milestones bar
-            boolean unlocked = ft.isUnlocked(info.currentStreak);
-            LinearLayout pill = new LinearLayout(this);
-            pill.setOrientation(LinearLayout.VERTICAL);
-            pill.setGravity(android.view.Gravity.CENTER);
-            int itemPadH = (int) (12 * getResources().getDisplayMetrics().density);
-            int itemPadV = (int) (8 * getResources().getDisplayMetrics().density);
-            pill.setPadding(itemPadH, itemPadV, itemPadH, itemPadV);
-
-            android.graphics.drawable.GradientDrawable pillBg = new android.graphics.drawable.GradientDrawable();
-            pillBg.setCornerRadius(14 * getResources().getDisplayMetrics().density);
-            if (unlocked) {
-                pillBg.setColor(Color.parseColor(dark ? "#33" + ft.startColor.substring(1) : "#15" + ft.startColor.substring(1)));
-                pillBg.setStroke((int) (1.5f * getResources().getDisplayMetrics().density), Color.parseColor(ft.startColor));
-            } else {
-                pillBg.setColor(Color.parseColor(dark ? "#1E293B" : "#F1F5F9"));
-                pillBg.setStroke((int) (1f * getResources().getDisplayMetrics().density), Color.parseColor(dark ? "#334155" : "#E2E8F0"));
-            }
-            pill.setBackground(pillBg);
-
-            LinearLayout.LayoutParams pLp = new LinearLayout.LayoutParams(-2, -2);
-            pLp.rightMargin = (int) (8 * getResources().getDisplayMetrics().density);
-            pill.setLayoutParams(pLp);
-
-            TextView ic = new TextView(this);
-            ic.setText(unlocked ? ft.icon : "🔒");
-            ic.setTextSize(unlocked ? (14 + ft.level * 2) : 15);
-            ic.setGravity(android.view.Gravity.CENTER);
-            pill.addView(ic);
-
-            TextView txt = new TextView(this);
-            txt.setText(ft.minDays + " ngày");
-            txt.setTextSize(11);
-            txt.setTypeface(null, android.graphics.Typeface.BOLD);
-            txt.setTextColor(unlocked ? Color.parseColor(ft.startColor) : dimColor);
-            txt.setGravity(android.view.Gravity.CENTER);
-            pill.addView(txt);
-
-            pill.setClickable(true);
-            pill.setFocusable(true);
-            pill.setOnClickListener(v -> {
-                Toast.makeText(this, ft.minDays + " ngày: " + ft.name + " (" + ft.effectDescription + ")", Toast.LENGTH_SHORT).show();
-            });
-
-            milestonesRow.addView(pill);
-        }
-        hScroll.addView(milestonesRow);
-        layout.addView(hScroll);
+        TextView flameEffect = new TextView(this);
+        flameEffect.setText(StreakFlame.name(info.currentStreak) + (nextMilestone > 0
+                ? "\nHiệu ứng lửa tiếp theo: " + nextMilestone + " ngày (còn " + (nextMilestone - info.currentStreak) + " ngày)"
+                : "\nĐã mở hiệu ứng lửa cao nhất"));
+        flameEffect.setTextColor(accentColor);
+        flameEffect.setTextSize(13);
+        flameEffect.setGravity(android.view.Gravity.CENTER);
+        flameEffect.setPadding(0, padding, 0, 0);
+        layout.addView(flameEffect);
 
         AlertDialog dialog = new AlertDialog.Builder(this)
                 .setView(scroll)
@@ -833,67 +570,31 @@ public class MainActivity extends Activity {
     private void bindHistory() {
         click(R.id.filter_today, () -> { week = false; show(); });
         click(R.id.filter_week, () -> { week = true; show(); });
-        findViewById(week ? R.id.filter_week : R.id.filter_today).setSelected(true);
-
-        View cardToday = findViewById(R.id.card_history_today);
-        View hint = findViewById(R.id.history_hint);
-
-        if (!week) {
-            // Tab Hôm nay: hiện tổng hôm nay và danh sách từng lần uống
-            if (cardToday != null) cardToday.setVisibility(View.VISIBLE);
-            if (hint != null) hint.setVisibility(View.VISIBLE);
-            label(R.id.history_total, total() + " ml");
-            bindLogs(false, 0);
-        } else {
-            // Tab 7 ngày qua: ẩn tổng hôm nay, hiển thị thống kê tổng hợp theo từng ngày
-            if (cardToday != null) cardToday.setVisibility(View.GONE);
-            if (hint != null) hint.setVisibility(View.GONE);
-            bind7DaysDailyHistory();
-        }
+        selectPeriodFilter(R.id.filter_today, !week);
+        selectPeriodFilter(R.id.filter_week, week);
+        findViewById(R.id.history_summary).setVisibility(week ? View.GONE : View.VISIBLE);
+        findViewById(R.id.history_hint).setVisibility(week ? View.GONE : View.VISIBLE);
+        if (week) bindDailyHistory();
+        else { label(R.id.history_total, total() + " ml"); bindLogs(false, 0); }
     }
 
-    private void bind7DaysDailyHistory() {
+    private void selectPeriodFilter(int id, boolean selected) {
+        TextView button = findViewById(id);
+        button.setSelected(selected);
+        button.setBackgroundResource(R.drawable.bg_history_filter);
+        button.setTextColor(selected ? Color.WHITE : getColor(R.color.aqua_blue));
+    }
+
+    private void bindDailyHistory() {
         LinearLayout list = findViewById(R.id.log_list);
-        list.removeAllViews();
-        int waterGoal = goal();
-        SimpleDateFormat dayFormat = new SimpleDateFormat("dd/MM", Locale.getDefault());
-        String[] dayNames = {"", "Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"};
-
-        for (int i = 1; i <= 7; i++) {
-            Calendar cal = Calendar.getInstance();
-            cal.add(Calendar.DATE, -i);
-            String dateStr = WaterStore.date(cal.getTimeInMillis());
-            int dayTotal = db.total(dateStr);
-            int dayOfWeek = cal.get(Calendar.DAY_OF_WEEK);
-            String title = (i == 1) ? "Hôm qua (" + dayFormat.format(cal.getTime()) + ")"
-                                    : dayNames[dayOfWeek] + " (" + dayFormat.format(cal.getTime()) + ")";
-
-            View item = getLayoutInflater().inflate(R.layout.item_daily_history, list, false);
-            TextView tvDate = item.findViewById(R.id.daily_date);
-            TextView tvSub = item.findViewById(R.id.daily_subtext);
-            TextView tvAmount = item.findViewById(R.id.daily_amount);
-            ProgressBar pb = item.findViewById(R.id.daily_progress);
-
-            tvDate.setText(title);
-            tvAmount.setText(dayTotal + " ml");
-            pb.setMax(waterGoal);
-            pb.setProgress(dayTotal);
-
-            if (dayTotal >= waterGoal) {
-                int pct = Math.round(((float) dayTotal / waterGoal) * 100f);
-                tvSub.setText("✓ Đạt mục tiêu (" + pct + "%)");
-                tvSub.setTextColor(Color.parseColor("#16A34A"));
-                tvAmount.setTextColor(Color.parseColor("#16A34A"));
-                pb.setProgressTintList(android.content.res.ColorStateList.valueOf(Color.parseColor("#16A34A")));
-            } else if (dayTotal > 0) {
-                int pct = Math.round(((float) dayTotal / waterGoal) * 100f);
-                tvSub.setText("Đạt " + pct + "% mục tiêu (" + dayTotal + "/" + waterGoal + " ml)");
-            } else {
-                tvSub.setText("Chưa có bản ghi uống nước");
-                tvAmount.setTextColor(Color.parseColor("#94A3B8"));
-            }
-
-            list.addView(item);
+        Calendar day = Calendar.getInstance();
+        for (int i = 0; i < 7; i++) {
+            View row = getLayoutInflater().inflate(R.layout.item_daily_water, list, false);
+            String date = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(day.getTime());
+            ((TextView) row.findViewById(R.id.daily_date)).setText(i == 0 ? "Hôm nay • " + date : date);
+            ((TextView) row.findViewById(R.id.daily_total)).setText(db.total(WaterStore.date(day.getTimeInMillis())) + " ml");
+            list.addView(row);
+            day.add(Calendar.DATE, -1);
         }
     }
 
@@ -956,6 +657,8 @@ public class MainActivity extends Activity {
     private void bindStats() {
         click(R.id.stats_week, () -> { month = false; show(); });
         click(R.id.stats_month, () -> { month = true; show(); });
+        selectPeriodFilter(R.id.stats_week, !month);
+        selectPeriodFilter(R.id.stats_month, month);
         int days = month ? 30 : 7, sum = 0, success = 0;
         int[] values = new int[days]; String[] labels = new String[days];
         Calendar day = Calendar.getInstance(); day.add(Calendar.DATE, -days + 1);
@@ -996,28 +699,10 @@ public class MainActivity extends Activity {
         int remaining = Math.max(0, waterGoal - currentWater);
         float percentage = ((float) currentWater / Math.max(1, waterGoal)) * 100f;
 
-        int level;
-        String levelName;
-        String levelDesc;
-
-        // 4 cấp độ tiến hóa: <30% (Lv.1), <70% (Lv.2), <100% (Lv.3), >=100% (Lv.4)
-        if (percentage < 30f) {
-            level = 0;
-            levelName = "Mầm Nước (Cấp 1)";
-            levelDesc = "Cấp 1 • Giai đoạn mầm nước (" + Math.round(percentage) + "%) • Còn: " + remaining + " ml";
-        } else if (percentage < 70f) {
-            level = 1;
-            levelName = "Bé Nước (Cấp 2)";
-            levelDesc = "Cấp 2 • Giai đoạn bé nước (" + Math.round(percentage) + "%) • Còn: " + remaining + " ml";
-        } else if (percentage < 100f) {
-            level = 2;
-            levelName = "Giọt Nước (Cấp 3)";
-            levelDesc = "Cấp 3 • Giai đoạn giọt nước (" + Math.round(percentage) + "%) • Còn: " + remaining + " ml";
-        } else {
-            level = 3;
-            levelName = "Chiến Binh Nước (Cấp 4)";
-            levelDesc = "Cấp 4 • Đạt 100% mục tiêu hôm nay (" + Math.round(percentage) + "%)";
-        }
+        int level = PetLevels.level(currentWater, waterGoal);
+        String levelName = PetLevels.title(level);
+        String levelDesc = "Cấp " + (level + 1) + " • " + Math.round(percentage) + "% mục tiêu hôm nay"
+                + (remaining > 0 ? " • Còn: " + remaining + " ml" : " • Đã hoàn thành");
 
         label(R.id.pet_name, levelName);
         label(R.id.pet_level, levelDesc);
@@ -1032,6 +717,11 @@ public class MainActivity extends Activity {
         if (petView != null) {
             petView.setLevel(level);
         }
+    }
+
+    private void setFlame(int id, int days) {
+        FlameView flame = findViewById(id);
+        if (flame != null) flame.setStreak(days);
     }
 
     private void bindPet() {
@@ -1058,17 +748,16 @@ public class MainActivity extends Activity {
 
         // Streak status in Pet Screen
         StreakManager.StreakInfo petStreak = streakManager.getStreakInfo(goal());
-        StreakManager.FlameTier petFlame = StreakManager.getFlameTier(petStreak.currentStreak);
-        label(R.id.pet_streak_icon, petFlame.icon);
-        label(R.id.pet_streak_title, streakManager.getStreakName() + " • " + petStreak.currentStreak + " ngày (" + petFlame.name + ")");
+        setFlame(R.id.pet_streak_icon, petStreak.currentStreak);
+        label(R.id.pet_streak_title, streakManager.getStreakName() + " • " + petStreak.currentStreak + " ngày");
         label(R.id.pet_streak_desc, petStreak.isGoalAchievedToday ? "✓ Đã thắp sáng hôm nay" : "⚡ Còn " + petStreak.remainingMl + " ml để giữ lửa");
         click(R.id.pet_streak_card, () -> showStreakDialog(petStreak));
 
         // 4 Evolution Levels
-        click(R.id.pet_small, () -> previewPetLevel(0, "Cấp 1: Mầm Nước (< 30% mục tiêu)"));
-        click(R.id.pet_growing, () -> previewPetLevel(1, "Cấp 2: Bé Nước (30% - 69% mục tiêu)"));
-        click(R.id.pet_healthy, () -> previewPetLevel(2, "Cấp 3: Giọt Nước (70% - 99% mục tiêu)"));
-        click(R.id.pet_bright, () -> previewPetLevel(3, "Cấp 4: Chiến Binh Nước (>= 100% mục tiêu)"));
+        click(R.id.pet_small, () -> previewPetLevel(0, PetLevels.title(0)));
+        click(R.id.pet_growing, () -> previewPetLevel(1, PetLevels.title(1)));
+        click(R.id.pet_healthy, () -> previewPetLevel(2, PetLevels.title(2)));
+        click(R.id.pet_bright, () -> previewPetLevel(3, PetLevels.title(3)));
     }
 
     private void previewPetLevel(int previewLevel, String msg) {
