@@ -22,22 +22,33 @@ public class StreakManager {
 
     public static class FlameTier {
         public final int minDays;
+        public final int level;
         public final String name;
         public final String icon;
         public final String startColor;
         public final String endColor;
         public final String strokeColor;
         public final String glowColor;
+        public final float scaleMultiplier;
+        public final int badgeIconSp;
+        public final int dialogSizeDp;
+        public final int dialogIconSp;
         public final String effectDescription;
 
-        public FlameTier(int minDays, String name, String icon, String startColor, String endColor, String strokeColor, String glowColor, String effectDescription) {
+        public FlameTier(int minDays, int level, String name, String icon, String startColor, String endColor, String strokeColor, String glowColor,
+                         float scaleMultiplier, int badgeIconSp, int dialogSizeDp, int dialogIconSp, String effectDescription) {
             this.minDays = minDays;
+            this.level = level;
             this.name = name;
             this.icon = icon;
             this.startColor = startColor;
             this.endColor = endColor;
             this.strokeColor = strokeColor;
             this.glowColor = glowColor;
+            this.scaleMultiplier = scaleMultiplier;
+            this.badgeIconSp = badgeIconSp;
+            this.dialogSizeDp = dialogSizeDp;
+            this.dialogIconSp = dialogIconSp;
             this.effectDescription = effectDescription;
         }
 
@@ -49,14 +60,23 @@ public class StreakManager {
     private static final List<FlameTier> ALL_FLAME_TIERS;
     static {
         List<FlameTier> tiers = new ArrayList<>();
-        tiers.add(new FlameTier(0, "Ngọn Lửa Khởi Động", "🔥", "#FF6D00", "#FF3D00", "#FFE082", "#FF9800", "Bắt đầu hành trình giữ lửa, uống đủ nước mỗi ngày"));
-        tiers.add(new FlameTier(3, "Ngọn Lửa Lam", "⚡🔥", "#0284C7", "#00E5FF", "#BAE6FD", "#38BDF8", "Mở khóa hiệu ứng Lửa Lam bứt phá 3 ngày liên tiếp!"));
-        tiers.add(new FlameTier(7, "Ngọn Lửa Tím", "✨🔥", "#7E22CE", "#E879F9", "#F5D0FE", "#C084FC", "Mở khóa hiệu ứng Tử Diễm huyền bí bền bỉ 1 tuần!"));
-        tiers.add(new FlameTier(14, "Ngọn Lửa Hoàng Kim", "🌟🔥", "#D97706", "#FDE047", "#FEF08A", "#FBBF24", "Mở khóa hiệu ứng Lửa Vàng Hoàng Kim 2 tuần liên tiếp!"));
-        tiers.add(new FlameTier(30, "Ngọn Lửa Thần Thoại", "👑🔥", "#E11D48", "#FB7185", "#FFE4E6", "#FDA4AF", "Mở khóa hiệu ứng Thần Thoại bất diệt 1 tháng liên tục!"));
-        tiers.add(new FlameTier(50, "Tinh Thể Băng Lửa", "💎🔥", "#0D9488", "#2DD4BF", "#CCFBF1", "#5EEAD4", "Hiệu ứng Tinh Thể Băng Lửa 50 ngày bứt phá giới hạn!"));
-        tiers.add(new FlameTier(100, "Vương Miện Bách Nhật", "🔱🔥", "#4F46E5", "#818CF8", "#E0E7FF", "#A5B4FC", "Hiệu ứng Vương Miện Bách Nhật 100 ngày kỷ luật đỉnh cao!"));
-        tiers.add(new FlameTier(365, "Chiến Binh Bất Diệt", "🔥", "#B91C1C", "#F87171", "#FEE2E2", "#EF4444", "Huyền thoại 1 năm kiên định không ngừng nghỉ!"));
+        // Ngọn lửa càng ngày càng to (scale & textSize tăng dần) và đổi màu theo chuỗi kiểu TikTok
+        tiers.add(new FlameTier(0, 1, "Ngọn Lửa Khởi Động", "🔥", "#FF6D00", "#FF3D00", "#FFE082", "#FF9800",
+                1.00f, 22, 80, 42, "Ngọn lửa cam khởi động giữ lửa mỗi ngày"));
+        tiers.add(new FlameTier(3, 2, "Ngọn Lửa Lam", "⚡🔥", "#0284C7", "#00E5FF", "#BAE6FD", "#38BDF8",
+                1.12f, 25, 96, 50, "Lửa Lam bốc cháy to hơn, bứt tốc mốc 3 ngày!"));
+        tiers.add(new FlameTier(7, 3, "Ngọn Lửa Tím", "✨🔥", "#7E22CE", "#E879F9", "#F5D0FE", "#C084FC",
+                1.24f, 28, 112, 58, "Tử Diễm bùng nổ to rực rỡ, kiên trì bền bỉ 1 tuần!"));
+        tiers.add(new FlameTier(14, 4, "Ngọn Lửa Hoàng Kim", "🌟🔥", "#D97706", "#FDE047", "#FEF08A", "#FBBF24",
+                1.36f, 31, 126, 66, "Ánh lửa Hoàng Kim bừng sáng chói lọi 2 tuần kiên định!"));
+        tiers.add(new FlameTier(30, 5, "Ngọn Lửa Thần Thoại", "👑🔥", "#E11D48", "#FB7185", "#FFE4E6", "#FDA4AF",
+                1.50f, 35, 140, 75, "Ngọn Lửa Thần Thoại khổng lồ bất diệt 1 tháng kỷ luật!"));
+        tiers.add(new FlameTier(50, 6, "Tinh Thể Băng Lửa", "💎🔥", "#0D9488", "#2DD4BF", "#CCFBF1", "#5EEAD4",
+                1.58f, 37, 148, 80, "Hiệu ứng Tinh Thể Băng Lửa 50 ngày bứt phá giới hạn!"));
+        tiers.add(new FlameTier(100, 7, "Vương Miện Bách Nhật", "🔱🔥", "#4F46E5", "#818CF8", "#E0E7FF", "#A5B4FC",
+                1.66f, 39, 156, 85, "Hiệu ứng Vương Miện Bách Nhật 100 ngày kỷ luật đỉnh cao!"));
+        tiers.add(new FlameTier(365, 8, "Chiến Binh Bất Diệt", "🔥", "#B91C1C", "#F87171", "#FEE2E2", "#EF4444",
+                1.75f, 42, 165, 90, "Huyền thoại 1 năm kiên định không ngừng nghỉ!"));
         ALL_FLAME_TIERS = Collections.unmodifiableList(tiers);
     }
 
