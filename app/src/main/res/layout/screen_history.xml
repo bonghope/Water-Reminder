@@ -6,10 +6,10 @@
     <TextView android:id="@+id/filter_today" style="@style/Aqua.Choice" android:text="Hôm nay" />
     <TextView android:id="@+id/filter_week" style="@style/Aqua.Choice" android:text="7 ngày qua" />
   </LinearLayout>
-  <LinearLayout style="@style/Aqua.Card" android:orientation="vertical">
+  <LinearLayout android:id="@+id/card_history_today" style="@style/Aqua.Card" android:orientation="vertical">
     <TextView style="@style/Aqua.Caption" android:text="Hôm nay đã uống" />
     <TextView android:id="@+id/history_total" style="@style/Aqua.Metric" android:text="" />
   </LinearLayout>
-  <TextView style="@style/Aqua.Caption" android:text="Chạm vào bản ghi để đổi loại đồ uống hoặc xóa." />
+  <TextView android:id="@+id/history_hint" style="@style/Aqua.Caption" android:text="Chạm vào bản ghi để đổi loại đồ uống hoặc xóa." />
   <LinearLayout android:id="@+id/log_list" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" />
 </LinearLayout>

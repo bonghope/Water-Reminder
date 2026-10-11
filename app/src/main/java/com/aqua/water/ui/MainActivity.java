@@ -305,12 +305,13 @@ public class MainActivity extends Activity {
         db.add(amount, types[selectedDrink - 1]);
         int after = total();
 
-        addCardVisible = false;
+        // Giữ mở khung thêm nước theo yêu cầu người dùng
+        addCardVisible = true;
         if (before < target && after >= target) {
             StreakManager.StreakInfo newStreak = streakManager.getStreakInfo(target);
             showCelebrationDialog(newStreak);
         } else {
-            Toast.makeText(this, "Thêm " + amount + " ml thành công!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Đã thêm " + amount + " ml!", Toast.LENGTH_SHORT).show();
         }
         show();
     }
@@ -719,7 +720,67 @@ public class MainActivity extends Activity {
         click(R.id.filter_today, () -> { week = false; show(); });
         click(R.id.filter_week, () -> { week = true; show(); });
         findViewById(week ? R.id.filter_week : R.id.filter_today).setSelected(true);
-        label(R.id.history_total, total() + " ml"); bindLogs(week, 0);
+
+        View cardToday = findViewById(R.id.card_history_today);
+        View hint = findViewById(R.id.history_hint);
+
+        if (!week) {
+            // Tab Hôm nay: hiện tổng hôm nay và danh sách từng lần uống
+            if (cardToday != null) cardToday.setVisibility(View.VISIBLE);
+            if (hint != null) hint.setVisibility(View.VISIBLE);
+            label(R.id.history_total, total() + " ml");
+            bindLogs(false, 0);
+        } else {
+            // Tab 7 ngày qua: ẩn tổng hôm nay, hiển thị thống kê tổng hợp theo từng ngày
+            if (cardToday != null) cardToday.setVisibility(View.GONE);
+            if (hint != null) hint.setVisibility(View.GONE);
+            bind7DaysDailyHistory();
+        }
+    }
+
+    private void bind7DaysDailyHistory() {
+        LinearLayout list = findViewById(R.id.log_list);
+        list.removeAllViews();
+        int waterGoal = goal();
+        SimpleDateFormat dayFormat = new SimpleDateFormat("dd/MM", Locale.getDefault());
+        String[] dayNames = {"", "Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"};
+
+        for (int i = 1; i <= 7; i++) {
+            Calendar cal = Calendar.getInstance();
+            cal.add(Calendar.DATE, -i);
+            String dateStr = WaterStore.date(cal.getTimeInMillis());
+            int dayTotal = db.total(dateStr);
+            int dayOfWeek = cal.get(Calendar.DAY_OF_WEEK);
+            String title = (i == 1) ? "Hôm qua (" + dayFormat.format(cal.getTime()) + ")"
+                                    : dayNames[dayOfWeek] + " (" + dayFormat.format(cal.getTime()) + ")";
+
+            View item = getLayoutInflater().inflate(R.layout.item_daily_history, list, false);
+            TextView tvDate = item.findViewById(R.id.daily_date);
+            TextView tvSub = item.findViewById(R.id.daily_subtext);
+            TextView tvAmount = item.findViewById(R.id.daily_amount);
+            ProgressBar pb = item.findViewById(R.id.daily_progress);
+
+            tvDate.setText(title);
+            tvAmount.setText(dayTotal + " ml");
+            pb.setMax(waterGoal);
+            pb.setProgress(dayTotal);
+
+            if (dayTotal >= waterGoal) {
+                int pct = Math.round(((float) dayTotal / waterGoal) * 100f);
+                tvSub.setText("✓ Đạt mục tiêu (" + pct + "%)");
+                tvSub.setTextColor(Color.parseColor("#16A34A"));
+                tvAmount.setTextColor(Color.parseColor("#16A34A"));
+                pb.setProgressTintList(android.content.res.ColorStateList.valueOf(Color.parseColor("#16A34A")));
+            } else if (dayTotal > 0) {
+                int pct = Math.round(((float) dayTotal / waterGoal) * 100f);
+                tvSub.setText("Đạt " + pct + "% mục tiêu (" + dayTotal + "/" + waterGoal + " ml)");
+            } else {
+                tvSub.setText("Chưa có bản ghi uống nước");
+                tvAmount.setTextColor(Color.parseColor("#94A3B8"));
+            }
+
+            list.addView(item);
+        }
     }
 
     private void bindLogs(boolean range, int limit) {
@@ -965,30 +1026,6 @@ public class MainActivity extends Activity {
         label(R.id.goal_button, goal() + " ml ›");
         click(R.id.goal_button, () -> number("Mục tiêu hàng ngày (ml)", goal(), true));
 
-        // Switch thông báo nhắc nhở trong cài đặt
-        Switch reminder = findViewById(R.id.settings_reminder_switch);
-        View intervalCard = findViewById(R.id.card_interval);
-        boolean reminderOn = prefs.getBoolean("REMINDER_IS_ON", false);
-        if (reminder != null) {
-            reminder.setOnCheckedChangeListener(null);
-            reminder.setChecked(reminderOn);
-            reminder.setOnCheckedChangeListener((button, on) -> {
-                if (on && Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
-                    reminder.setChecked(false);
-                    requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 10);
-                    return;
-                }
-                config.setReminderOn(on);
-                if (intervalCard != null) {
-                    intervalCard.setVisibility(on ? View.VISIBLE : View.GONE);
-                }
-                if (on) checkReminderPermissions();
-            });
-        }
-        if (intervalCard != null) {
-            intervalCard.setVisibility(reminderOn ? View.VISIBLE : View.GONE);
-        }
-
         // Switch chế độ tối ở cuối (ngay trên Aqua)
         Switch theme = findViewById(R.id.theme_switch);
         if (theme != null) {
@@ -999,7 +1036,6 @@ public class MainActivity extends Activity {
                 recreate();
             });
         }
-        bindInterval();
     }
 
     @Override public void onRequestPermissionsResult(int request, String[] permissions, int[] results) {
