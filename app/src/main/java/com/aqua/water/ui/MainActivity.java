@@ -15,6 +15,8 @@ import android.view.View;
 import android.view.MotionEvent;
 import android.view.HapticFeedbackConstants;
 import android.view.ViewGroup;
+import android.view.Gravity;
+import android.util.TypedValue;
 import android.view.WindowInsets;
 import android.widget.*;
 import com.aqua.water.R;
@@ -137,17 +139,44 @@ public class MainActivity extends Activity {
         // Draggable Floating Streak Flame & Tier Badge
         StreakManager.StreakInfo headerStreak = streakManager.getStreakInfo(goal());
         StreakManager.FlameTier currentTier = StreakManager.getFlameTier(headerStreak.currentStreak);
-        label(R.id.header_streak_icon, currentTier.icon);
+
+        TextView headerStreakIcon = findViewById(R.id.header_streak_icon);
+        if (headerStreakIcon != null) {
+            headerStreakIcon.setText(currentTier.icon);
+            headerStreakIcon.setTextSize(currentTier.badgeIconSp);
+            if (headerStreak.isGoalAchievedToday) {
+                headerStreakIcon.animate().cancel();
+                android.animation.ObjectAnimator pulseX = android.animation.ObjectAnimator.ofFloat(headerStreakIcon, "scaleX", 1.0f, 1.16f, 1.0f);
+                android.animation.ObjectAnimator pulseY = android.animation.ObjectAnimator.ofFloat(headerStreakIcon, "scaleY", 1.0f, 1.16f, 1.0f);
+                pulseX.setDuration(950);
+                pulseY.setDuration(950);
+                pulseX.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+                pulseY.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+                pulseX.setRepeatMode(android.animation.ValueAnimator.REVERSE);
+                pulseY.setRepeatMode(android.animation.ValueAnimator.REVERSE);
+                pulseX.start();
+                pulseY.start();
+            } else {
+                headerStreakIcon.animate().cancel();
+                headerStreakIcon.setScaleX(1.0f);
+                headerStreakIcon.setScaleY(1.0f);
+            }
+        }
         label(R.id.header_streak_text, String.valueOf(headerStreak.currentStreak));
+        TextView headerStreakText = findViewById(R.id.header_streak_text);
+        if (headerStreakText != null) {
+            headerStreakText.setTextColor(Color.parseColor(currentTier.startColor));
+        }
         View floatingBadge = findViewById(R.id.floating_streak_badge);
         if (floatingBadge != null) {
             android.graphics.drawable.GradientDrawable badgeBg = new android.graphics.drawable.GradientDrawable();
             badgeBg.setCornerRadius(24 * getResources().getDisplayMetrics().density);
-            badgeBg.setOrientation(android.graphics.drawable.GradientDrawable.Orientation.BL_TR);
-            badgeBg.setColors(new int[]{Color.parseColor(currentTier.startColor), Color.parseColor(currentTier.endColor)});
-            badgeBg.setStroke((int) (1.5f * getResources().getDisplayMetrics().density), Color.parseColor(currentTier.strokeColor));
+            badgeBg.setColor(Color.WHITE);
+            badgeBg.setStroke((int) (2f * getResources().getDisplayMetrics().density), Color.parseColor(currentTier.startColor));
             floatingBadge.setBackground(badgeBg);
-            floatingBadge.setAlpha(headerStreak.isGoalAchievedToday ? 1.0f : 0.85f);
+            floatingBadge.setAlpha(headerStreak.isGoalAchievedToday ? 1.0f : 0.92f);
+            floatingBadge.setScaleX(currentTier.scaleMultiplier);
+            floatingBadge.setScaleY(currentTier.scaleMultiplier);
             if (floatingStreakX >= 0 && floatingStreakY >= 0) {
                 floatingBadge.setX(floatingStreakX);
                 floatingBadge.setY(floatingStreakY);
@@ -261,7 +290,11 @@ public class MainActivity extends Activity {
 
         label(R.id.home_percent, Math.round(percentage) + "%");
         label(R.id.home_amount, amount + " / " + waterGoal + " ml");
-        label(R.id.home_remaining, "Còn " + remaining + " ml để đạt mục tiêu");
+        if (remaining <= 0) {
+            label(R.id.home_remaining, "Đã hoàn thành mục tiêu!");
+        } else {
+            label(R.id.home_remaining, "Còn " + remaining + " ml để hoàn thành mục tiêu");
+        }
 
 
         int[] drinkIds = {R.id.ivWater, R.id.ivTea, R.id.ivSweet, R.id.ivMilk};
@@ -293,9 +326,72 @@ public class MainActivity extends Activity {
 
     private void updateAddCard() {
         boolean visible = tab == 0 && addCardVisible;
-        findViewById(R.id.add_water_overlay).setVisibility(visible ? View.VISIBLE : View.GONE);
-        findViewById(R.id.cardAddWater).setVisibility(addCardVisible ? View.VISIBLE : View.GONE);
-        findViewById(R.id.btnReopenCard).setVisibility(View.GONE);
+        View overlay = findViewById(R.id.add_water_overlay);
+        if (overlay != null) overlay.setVisibility(visible ? View.VISIBLE : View.GONE);
+        View card = findViewById(R.id.cardAddWater);
+        if (card != null) card.setVisibility(addCardVisible ? View.VISIBLE : View.GONE);
+        View reopen = findViewById(R.id.btnReopenCard);
+        if (reopen != null) reopen.setVisibility(View.GONE);
+
+        View homeBox = findViewById(R.id.home_progress_box);
+        if (homeBox != null && tab == 0) {
+            TextView tvTitle = findViewById(R.id.home_title);
+            TextView tvPercent = findViewById(R.id.home_percent);
+            TextView tvAmount = findViewById(R.id.home_amount);
+            TextView tvRemaining = findViewById(R.id.home_remaining);
+            float density = getResources().getDisplayMetrics().density;
+
+            if (addCardVisible) {
+                // Đang mở thêm nước: phần chữ góc trái bên trên, cỡ chữ bình thường
+                homeBox.animate().translationY(0f).setDuration(220).start();
+                if (homeBox instanceof LinearLayout) {
+                    ((LinearLayout) homeBox).setGravity(Gravity.START);
+                }
+                if (tvTitle != null) {
+                    tvTitle.setGravity(Gravity.START);
+                    tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+                }
+                if (tvPercent != null) {
+                    tvPercent.setGravity(Gravity.START);
+                    tvPercent.setTextSize(TypedValue.COMPLEX_UNIT_SP, 44);
+                }
+                if (tvAmount != null) {
+                    tvAmount.setGravity(Gravity.START);
+                    tvAmount.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
+                }
+                if (tvRemaining != null) {
+                    tvRemaining.setGravity(Gravity.START);
+                    tvRemaining.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+                }
+            } else {
+                // Tắt thêm nước: chuyển xuống giữa, cỡ chữ to lên 1 chút
+                View pageScroll = findViewById(R.id.page_scroll);
+                float targetY = 160f * density;
+                if (pageScroll != null && pageScroll.getHeight() > 0) {
+                    targetY = Math.max(120f * density, (pageScroll.getHeight() - homeBox.getHeight()) * 0.42f);
+                }
+                homeBox.animate().translationY(targetY).setDuration(220).start();
+                if (homeBox instanceof LinearLayout) {
+                    ((LinearLayout) homeBox).setGravity(Gravity.CENTER_HORIZONTAL);
+                }
+                if (tvTitle != null) {
+                    tvTitle.setGravity(Gravity.CENTER_HORIZONTAL);
+                    tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+                }
+                if (tvPercent != null) {
+                    tvPercent.setGravity(Gravity.CENTER_HORIZONTAL);
+                    tvPercent.setTextSize(TypedValue.COMPLEX_UNIT_SP, 56);
+                }
+                if (tvAmount != null) {
+                    tvAmount.setGravity(Gravity.CENTER_HORIZONTAL);
+                    tvAmount.setTextSize(TypedValue.COMPLEX_UNIT_SP, 24);
+                }
+                if (tvRemaining != null) {
+                    tvRemaining.setGravity(Gravity.CENTER_HORIZONTAL);
+                    tvRemaining.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+                }
+            }
+        }
     }
 
     private void add(int amount) {
@@ -326,9 +422,9 @@ public class MainActivity extends Activity {
         int padding = (int) (22 * getResources().getDisplayMetrics().density);
         layout.setPadding(padding, padding, padding, padding);
 
-        // Animated Flame Circle Box
+        // Animated Flame Circle Box (Kích thước to dần theo cấp độ)
         FrameLayout flameContainer = new FrameLayout(this);
-        int flameSize = (int) (84 * getResources().getDisplayMetrics().density);
+        int flameSize = (int) (tier.dialogSizeDp * getResources().getDisplayMetrics().density);
         LinearLayout.LayoutParams fcLp = new LinearLayout.LayoutParams(flameSize, flameSize);
         fcLp.gravity = android.view.Gravity.CENTER_HORIZONTAL;
         fcLp.bottomMargin = (int) (14 * getResources().getDisplayMetrics().density);
@@ -337,12 +433,12 @@ public class MainActivity extends Activity {
         android.graphics.drawable.GradientDrawable flameBg = new android.graphics.drawable.GradientDrawable();
         flameBg.setShape(android.graphics.drawable.GradientDrawable.OVAL);
         flameBg.setColors(new int[]{Color.parseColor(tier.startColor), Color.parseColor(tier.endColor)});
-        flameBg.setStroke((int) (2.5f * getResources().getDisplayMetrics().density), Color.parseColor(tier.strokeColor));
+        flameBg.setStroke((int) (3f * getResources().getDisplayMetrics().density), Color.parseColor(tier.strokeColor));
         flameContainer.setBackground(flameBg);
 
         TextView tvFire = new TextView(this);
         tvFire.setText(tier.icon);
-        tvFire.setTextSize(38);
+        tvFire.setTextSize(tier.dialogIconSp);
         tvFire.setGravity(android.view.Gravity.CENTER);
         FrameLayout.LayoutParams fLp = new FrameLayout.LayoutParams(-1, -1);
         fLp.gravity = android.view.Gravity.CENTER;
@@ -354,10 +450,10 @@ public class MainActivity extends Activity {
         flameContainer.setScaleX(0.3f);
         flameContainer.setScaleY(0.3f);
         flameContainer.animate()
-                .scaleX(1.15f).scaleY(1.15f)
+                .scaleX(tier.scaleMultiplier * 1.15f).scaleY(tier.scaleMultiplier * 1.15f)
                 .setDuration(350)
                 .withEndAction(() -> {
-                    flameContainer.animate().scaleX(1.0f).scaleY(1.0f).setDuration(180).start();
+                    flameContainer.animate().scaleX(tier.scaleMultiplier).scaleY(tier.scaleMultiplier).setDuration(180).start();
                     tvFire.animate().rotation(15f).setDuration(100).withEndAction(() ->
                             tvFire.animate().rotation(-15f).setDuration(100).withEndAction(() ->
                                     tvFire.animate().rotation(0f).setDuration(100).start()
@@ -443,9 +539,9 @@ public class MainActivity extends Activity {
         nameRow.setOnClickListener(v -> promptChangeStreakName(info));
         layout.addView(nameRow);
 
-        // 2. Biểu tượng ngọn lửa lớn với gradient hiệu ứng theo mốc
+        // 2. Biểu tượng ngọn lửa lớn với kích thước to dần & gradient đổi màu theo cấp
         FrameLayout fireBox = new FrameLayout(this);
-        int boxSize = (int) (90 * getResources().getDisplayMetrics().density);
+        int boxSize = (int) (currentTier.dialogSizeDp * getResources().getDisplayMetrics().density);
         LinearLayout.LayoutParams fbLp = new LinearLayout.LayoutParams(boxSize, boxSize);
         fbLp.gravity = android.view.Gravity.CENTER_HORIZONTAL;
         fbLp.bottomMargin = (int) (6 * getResources().getDisplayMetrics().density);
@@ -454,29 +550,47 @@ public class MainActivity extends Activity {
         android.graphics.drawable.GradientDrawable fbBg = new android.graphics.drawable.GradientDrawable();
         fbBg.setShape(android.graphics.drawable.GradientDrawable.OVAL);
         fbBg.setColors(new int[]{Color.parseColor(currentTier.startColor), Color.parseColor(currentTier.endColor)});
-        fbBg.setStroke((int) (2 * getResources().getDisplayMetrics().density), Color.parseColor(currentTier.strokeColor));
+        fbBg.setStroke((int) (3 * getResources().getDisplayMetrics().density), Color.parseColor(currentTier.strokeColor));
         fireBox.setBackground(fbBg);
 
         TextView tvFire = new TextView(this);
         tvFire.setText(currentTier.icon);
-        tvFire.setTextSize(44);
+        tvFire.setTextSize(currentTier.dialogIconSp);
         tvFire.setGravity(android.view.Gravity.CENTER);
         FrameLayout.LayoutParams fLp = new FrameLayout.LayoutParams(-1, -1);
         fLp.gravity = android.view.Gravity.CENTER;
         tvFire.setLayoutParams(fLp);
         fireBox.addView(tvFire);
+
+        // Hiệu ứng ngọn lửa bùng cháy liên tục (TikTok flame pulsing)
+        android.animation.ObjectAnimator fbPulseX = android.animation.ObjectAnimator.ofFloat(tvFire, "scaleX", 1.0f, 1.15f, 1.0f);
+        android.animation.ObjectAnimator fbPulseY = android.animation.ObjectAnimator.ofFloat(tvFire, "scaleY", 1.0f, 1.15f, 1.0f);
+        fbPulseX.setDuration(900);
+        fbPulseY.setDuration(900);
+        fbPulseX.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+        fbPulseY.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+        fbPulseX.setRepeatMode(android.animation.ValueAnimator.REVERSE);
+        fbPulseY.setRepeatMode(android.animation.ValueAnimator.REVERSE);
+        fbPulseX.start();
+        fbPulseY.start();
+
         fireBox.setClickable(true);
         fireBox.setFocusable(true);
         fireBox.setOnClickListener(v -> {
-            v.animate().scaleX(1.2f).scaleY(1.2f).setDuration(120).withEndAction(() ->
+            v.animate().scaleX(1.25f).scaleY(1.25f).setDuration(120).withEndAction(() ->
                     v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(120).start()
             ).start();
-            Toast.makeText(this, currentTier.name + " • " + currentTier.effectDescription, Toast.LENGTH_SHORT).show();
+            tvFire.animate().rotation(20f).setDuration(100).withEndAction(() ->
+                    tvFire.animate().rotation(-20f).setDuration(100).withEndAction(() ->
+                            tvFire.animate().rotation(0f).setDuration(100).start()
+                    ).start()
+            ).start();
+            Toast.makeText(this, currentTier.name + " (Cấp " + currentTier.level + ") • " + currentTier.effectDescription, Toast.LENGTH_SHORT).show();
         });
         layout.addView(fireBox);
 
         TextView tvTierLabel = new TextView(this);
-        tvTierLabel.setText(currentTier.name);
+        tvTierLabel.setText(currentTier.name + " • Cấp " + currentTier.level);
         tvTierLabel.setTextSize(13);
         tvTierLabel.setTypeface(null, android.graphics.Typeface.BOLD);
         tvTierLabel.setTextColor(Color.parseColor(currentTier.startColor));
@@ -580,7 +694,7 @@ public class MainActivity extends Activity {
 
             TextView ic = new TextView(this);
             ic.setText(unlocked ? ft.icon : "🔒");
-            ic.setTextSize(16);
+            ic.setTextSize(unlocked ? (14 + ft.level * 2) : 15);
             ic.setGravity(android.view.Gravity.CENTER);
             pill.addView(ic);
 
