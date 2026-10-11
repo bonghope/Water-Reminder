@@ -13,42 +13,7 @@
     <TextView android:id="@+id/goal_button" style="@style/Aqua.Button" android:text="" />
   </LinearLayout>
 
-  <!-- Card 2: Thông báo nhắc nhở -->
-  <LinearLayout style="@style/Aqua.Card" android:orientation="vertical">
-    <TextView style="@style/Aqua.Text" android:text="Nhắc nhở uống nước" android:textStyle="bold" />
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingTop="6dp">
-      <LinearLayout
-          android:layout_width="0dp"
-          android:layout_height="wrap_content"
-          android:layout_weight="1"
-          android:orientation="vertical">
-        <TextView
-            style="@style/Aqua.Text"
-            android:text="Bật thông báo nhắc nhở"
-            android:textSize="15sp"
-            android:textStyle="bold" />
-        <TextView
-            style="@style/Aqua.Caption"
-            android:text="Nhắc nhở đều đặn theo chu kỳ bạn chọn"
-            android:textSize="12sp" />
-      </LinearLayout>
-      <Switch
-          android:id="@+id/settings_reminder_switch"
-          android:layout_width="wrap_content"
-          android:layout_height="wrap_content"
-          android:minHeight="48dp" />
-    </LinearLayout>
-  </LinearLayout>
-
-  <!-- Khoảng cách giữa các lần nhắc: Chỉ hiển thị khi bật thông báo! -->
-  <include layout="@layout/view_interval" />
-
-  <!-- Card 3: Giao diện hiển thị / Chế độ tối (nằm ngay trên Aqua dưới cùng) -->
+  <!-- Card 2: Giao diện hiển thị / Chế độ tối (nằm ngay trên Aqua dưới cùng) -->
   <LinearLayout style="@style/Aqua.Card" android:orientation="vertical">
     <TextView style="@style/Aqua.Text" android:text="Giao diện hiển thị" android:textStyle="bold" />
     <LinearLayout
