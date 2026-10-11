@@ -86,4 +86,44 @@ public class StreakManagerTest {
         assertEquals(0, info.currentStreak);
         assertFalse(info.isGoalAchievedToday);
     }
+
+    @Test
+    public void testFlameTiers_progression() {
+        // 0-2 days: Khởi Động
+        StreakManager.FlameTier tier0 = StreakManager.getFlameTier(0);
+        assertEquals("Ngọn Lửa Khởi Động", tier0.name);
+        StreakManager.FlameTier tier2 = StreakManager.getFlameTier(2);
+        assertEquals("Ngọn Lửa Khởi Động", tier2.name);
+
+        // 3-6 days: Lửa Lam
+        StreakManager.FlameTier tier3 = StreakManager.getFlameTier(3);
+        assertEquals("Ngọn Lửa Lam", tier3.name);
+        assertEquals("#0284C7", tier3.startColor);
+
+        // 7-13 days: Lửa Tím
+        StreakManager.FlameTier tier7 = StreakManager.getFlameTier(7);
+        assertEquals("Ngọn Lửa Tím", tier7.name);
+        assertEquals("#7E22CE", tier7.startColor);
+
+        // 14-29 days: Hoàng Kim
+        StreakManager.FlameTier tier14 = StreakManager.getFlameTier(14);
+        assertEquals("Ngọn Lửa Hoàng Kim", tier14.name);
+        assertEquals("#D97706", tier14.startColor);
+
+        // 30+ days: Thần Thoại
+        StreakManager.FlameTier tier30 = StreakManager.getFlameTier(30);
+        assertEquals("Ngọn Lửa Thần Thoại", tier30.name);
+    }
+
+    @Test
+    public void testMilestones_accuracy() {
+        assertTrue(StreakManager.isMilestone(3));
+        assertTrue(StreakManager.isMilestone(7));
+        assertTrue(StreakManager.isMilestone(14));
+        assertTrue(StreakManager.isMilestone(30));
+        assertFalse(StreakManager.isMilestone(1));
+        assertFalse(StreakManager.isMilestone(2));
+        assertFalse(StreakManager.isMilestone(4));
+        assertFalse(StreakManager.isMilestone(8));
+    }
 }

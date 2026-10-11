@@ -136,11 +136,18 @@ public class MainActivity extends Activity {
 
         // Draggable Floating Streak Flame & Tier Badge
         StreakManager.StreakInfo headerStreak = streakManager.getStreakInfo(goal());
-        StreakManager.StreakBadge currentBadge = StreakManager.getCurrentBadge(headerStreak.currentStreak);
-        label(R.id.header_streak_icon, "🔥");
+        StreakManager.FlameTier currentTier = StreakManager.getFlameTier(headerStreak.currentStreak);
+        label(R.id.header_streak_icon, currentTier.icon);
         label(R.id.header_streak_text, String.valueOf(headerStreak.currentStreak));
         View floatingBadge = findViewById(R.id.floating_streak_badge);
         if (floatingBadge != null) {
+            android.graphics.drawable.GradientDrawable badgeBg = new android.graphics.drawable.GradientDrawable();
+            badgeBg.setCornerRadius(24 * getResources().getDisplayMetrics().density);
+            badgeBg.setOrientation(android.graphics.drawable.GradientDrawable.Orientation.BL_TR);
+            badgeBg.setColors(new int[]{Color.parseColor(currentTier.startColor), Color.parseColor(currentTier.endColor)});
+            badgeBg.setStroke((int) (1.5f * getResources().getDisplayMetrics().density), Color.parseColor(currentTier.strokeColor));
+            floatingBadge.setBackground(badgeBg);
+            floatingBadge.setAlpha(headerStreak.isGoalAchievedToday ? 1.0f : 0.85f);
             if (floatingStreakX >= 0 && floatingStreakY >= 0) {
                 floatingBadge.setX(floatingStreakX);
                 floatingBadge.setY(floatingStreakY);
@@ -308,17 +315,64 @@ public class MainActivity extends Activity {
         show();
     }
 
-        private void showCelebrationDialog(StreakManager.StreakInfo info) {
-        StreakManager.StreakBadge badge = StreakManager.getCurrentBadge(info.currentStreak);
+    private void showCelebrationDialog(StreakManager.StreakInfo info) {
+        StreakManager.FlameTier tier = StreakManager.getFlameTier(info.currentStreak);
+        boolean isMilestone = StreakManager.isMilestone(info.currentStreak);
+
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setGravity(android.view.Gravity.CENTER_HORIZONTAL);
         int padding = (int) (22 * getResources().getDisplayMetrics().density);
         layout.setPadding(padding, padding, padding, padding);
 
+        // Animated Flame Circle Box
+        FrameLayout flameContainer = new FrameLayout(this);
+        int flameSize = (int) (84 * getResources().getDisplayMetrics().density);
+        LinearLayout.LayoutParams fcLp = new LinearLayout.LayoutParams(flameSize, flameSize);
+        fcLp.gravity = android.view.Gravity.CENTER_HORIZONTAL;
+        fcLp.bottomMargin = (int) (14 * getResources().getDisplayMetrics().density);
+        flameContainer.setLayoutParams(fcLp);
+
+        android.graphics.drawable.GradientDrawable flameBg = new android.graphics.drawable.GradientDrawable();
+        flameBg.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+        flameBg.setColors(new int[]{Color.parseColor(tier.startColor), Color.parseColor(tier.endColor)});
+        flameBg.setStroke((int) (2.5f * getResources().getDisplayMetrics().density), Color.parseColor(tier.strokeColor));
+        flameContainer.setBackground(flameBg);
+
+        TextView tvFire = new TextView(this);
+        tvFire.setText(tier.icon);
+        tvFire.setTextSize(38);
+        tvFire.setGravity(android.view.Gravity.CENTER);
+        FrameLayout.LayoutParams fLp = new FrameLayout.LayoutParams(-1, -1);
+        fLp.gravity = android.view.Gravity.CENTER;
+        tvFire.setLayoutParams(fLp);
+        flameContainer.addView(tvFire);
+        layout.addView(flameContainer);
+
+        // Animate the flame icon (burst bounce & rotational wobble)
+        flameContainer.setScaleX(0.3f);
+        flameContainer.setScaleY(0.3f);
+        flameContainer.animate()
+                .scaleX(1.15f).scaleY(1.15f)
+                .setDuration(350)
+                .withEndAction(() -> {
+                    flameContainer.animate().scaleX(1.0f).scaleY(1.0f).setDuration(180).start();
+                    tvFire.animate().rotation(15f).setDuration(100).withEndAction(() ->
+                            tvFire.animate().rotation(-15f).setDuration(100).withEndAction(() ->
+                                    tvFire.animate().rotation(0f).setDuration(100).start()
+                            ).start()
+                    ).start();
+                }).start();
+
         TextView tvTitle = new TextView(this);
-        tvTitle.setText("Hoàn thành mục tiêu hôm nay!");
+        if (isMilestone) {
+            tvTitle.setText("🎉 MỞ KHÓA " + tier.name.toUpperCase() + "!");
+            tvTitle.setTextColor(Color.parseColor(tier.startColor));
+        } else {
+            tvTitle.setText("Hoàn thành mục tiêu hôm nay!");
+            tvTitle.setTextColor(Color.parseColor("#ff5722"));
+        }
         tvTitle.setTextSize(18);
-        tvTitle.setTextColor(Color.parseColor("#ff5722"));
         tvTitle.setTypeface(null, android.graphics.Typeface.BOLD);
         tvTitle.setGravity(android.view.Gravity.CENTER);
         layout.addView(tvTitle);
@@ -327,7 +381,13 @@ public class MainActivity extends Activity {
         int primaryColor = dark ? Color.parseColor("#E4F5FF") : Color.parseColor("#183E64");
 
         TextView tvMsg = new TextView(this);
-        tvMsg.setText("\nChuỗi \"" + streakManager.getStreakName() + "\" đạt " + info.currentStreak + " ngày.\n\nHuy hiệu: " + badge.name + " (" + badge.rankName + ")\n\nThú cưng đã đạt Cấp 4: Đại Tướng Thần Nước.\n\nHãy tiếp tục duy trì vào ngày mai nhé.");
+        StringBuilder sb = new StringBuilder();
+        sb.append("\nChuỗi \"").append(streakManager.getStreakName()).append("\" đạt ").append(info.currentStreak).append(" ngày liên tiếp.\n");
+        if (isMilestone) {
+            sb.append("\n🔥 ").append(tier.effectDescription).append("\n");
+        }
+        sb.append("\nThú cưng đã đạt Cấp 4: Chiến Binh Nước.\n\nHãy tiếp tục duy trì vào ngày mai nhé.");
+        tvMsg.setText(sb.toString());
         tvMsg.setTextSize(14);
         tvMsg.setTextColor(primaryColor);
         tvMsg.setGravity(android.view.Gravity.CENTER);
@@ -335,7 +395,7 @@ public class MainActivity extends Activity {
 
         AlertDialog dialog = new AlertDialog.Builder(this)
                 .setView(layout)
-                .setPositiveButton("Đồng ý", (d, w) -> d.dismiss())
+                .setPositiveButton("Tuyệt vời", (d, w) -> d.dismiss())
                 .create();
         showRoundedDialog(dialog);
     }
@@ -347,7 +407,8 @@ public class MainActivity extends Activity {
         int accentColor = dark ? Color.parseColor("#38BDF8") : Color.parseColor("#0284C7");
         int dimColor = dark ? Color.parseColor("#64748B") : Color.parseColor("#94A3B8");
 
-        StreakManager.StreakBadge nextBadge = StreakManager.getNextBadge(info.currentStreak);
+        StreakManager.FlameTier currentTier = StreakManager.getFlameTier(info.currentStreak);
+        StreakManager.FlameTier nextTier = StreakManager.getNextFlameTier(info.currentStreak);
 
         ScrollView scroll = new ScrollView(this);
         LinearLayout layout = new LinearLayout(this);
@@ -381,12 +442,45 @@ public class MainActivity extends Activity {
         nameRow.setOnClickListener(v -> promptChangeStreakName(info));
         layout.addView(nameRow);
 
-        // 2. Biểu tượng ngọn lửa lớn
+        // 2. Biểu tượng ngọn lửa lớn với gradient hiệu ứng theo mốc
+        FrameLayout fireBox = new FrameLayout(this);
+        int boxSize = (int) (90 * getResources().getDisplayMetrics().density);
+        LinearLayout.LayoutParams fbLp = new LinearLayout.LayoutParams(boxSize, boxSize);
+        fbLp.gravity = android.view.Gravity.CENTER_HORIZONTAL;
+        fbLp.bottomMargin = (int) (6 * getResources().getDisplayMetrics().density);
+        fireBox.setLayoutParams(fbLp);
+
+        android.graphics.drawable.GradientDrawable fbBg = new android.graphics.drawable.GradientDrawable();
+        fbBg.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+        fbBg.setColors(new int[]{Color.parseColor(currentTier.startColor), Color.parseColor(currentTier.endColor)});
+        fbBg.setStroke((int) (2 * getResources().getDisplayMetrics().density), Color.parseColor(currentTier.strokeColor));
+        fireBox.setBackground(fbBg);
+
         TextView tvFire = new TextView(this);
-        tvFire.setText("🔥");
-        tvFire.setTextSize(50);
+        tvFire.setText(currentTier.icon);
+        tvFire.setTextSize(44);
         tvFire.setGravity(android.view.Gravity.CENTER);
-        layout.addView(tvFire);
+        FrameLayout.LayoutParams fLp = new FrameLayout.LayoutParams(-1, -1);
+        fLp.gravity = android.view.Gravity.CENTER;
+        tvFire.setLayoutParams(fLp);
+        fireBox.addView(tvFire);
+        fireBox.setClickable(true);
+        fireBox.setFocusable(true);
+        fireBox.setOnClickListener(v -> {
+            v.animate().scaleX(1.2f).scaleY(1.2f).setDuration(120).withEndAction(() ->
+                    v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(120).start()
+            ).start();
+            Toast.makeText(this, currentTier.name + " • " + currentTier.effectDescription, Toast.LENGTH_SHORT).show();
+        });
+        layout.addView(fireBox);
+
+        TextView tvTierLabel = new TextView(this);
+        tvTierLabel.setText(currentTier.name);
+        tvTierLabel.setTextSize(13);
+        tvTierLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+        tvTierLabel.setTextColor(Color.parseColor(currentTier.startColor));
+        tvTierLabel.setGravity(android.view.Gravity.CENTER);
+        layout.addView(tvTierLabel);
 
         // 3. Số ngày chuỗi to rõ kiểu TikTok
         TextView tvCount = new TextView(this);
@@ -436,13 +530,13 @@ public class MainActivity extends Activity {
         tvStatusPill.setBackground(statusBg);
         layout.addView(tvStatusPill);
 
-        // 5. Mốc huy hiệu TikTok (Hàng ngang đơn giản, không văn vở)
+        // 5. Mốc hiệu ứng ngọn lửa (3, 7, 14, 30 ngày...)
         TextView tvNextMilestone = new TextView(this);
-        if (nextBadge != null) {
-            int remainingDays = nextBadge.requiredDays - info.currentStreak;
-            tvNextMilestone.setText("Mốc tiếp theo: " + nextBadge.requiredDays + " ngày (còn " + remainingDays + " ngày)");
+        if (nextTier != null) {
+            int remainingDays = nextTier.minDays - info.currentStreak;
+            tvNextMilestone.setText("Mốc tiếp theo: " + nextTier.minDays + " ngày (mở khóa " + nextTier.name + " - còn " + remainingDays + " ngày)");
         } else {
-            tvNextMilestone.setText("Đã chinh phục mọi mốc chuỗi! 👑");
+            tvNextMilestone.setText("Đã chinh phục mọi hiệu ứng ngọn lửa! 👑");
         }
         tvNextMilestone.setTextSize(12);
         tvNextMilestone.setTypeface(null, android.graphics.Typeface.BOLD);
@@ -458,8 +552,9 @@ public class MainActivity extends Activity {
         milestonesRow.setGravity(android.view.Gravity.CENTER_VERTICAL);
         milestonesRow.setPadding((int) (4 * getResources().getDisplayMetrics().density), (int) (4 * getResources().getDisplayMetrics().density), (int) (4 * getResources().getDisplayMetrics().density), (int) (10 * getResources().getDisplayMetrics().density));
 
-        for (StreakManager.StreakBadge badge : StreakManager.getAllBadges()) {
-            boolean unlocked = badge.isUnlocked(info.currentStreak);
+        for (StreakManager.FlameTier ft : StreakManager.getAllFlameTiers()) {
+            if (ft.minDays == 0) continue; // Skip tier 0 in milestones bar
+            boolean unlocked = ft.isUnlocked(info.currentStreak);
             LinearLayout pill = new LinearLayout(this);
             pill.setOrientation(LinearLayout.VERTICAL);
             pill.setGravity(android.view.Gravity.CENTER);
@@ -470,8 +565,8 @@ public class MainActivity extends Activity {
             android.graphics.drawable.GradientDrawable pillBg = new android.graphics.drawable.GradientDrawable();
             pillBg.setCornerRadius(14 * getResources().getDisplayMetrics().density);
             if (unlocked) {
-                pillBg.setColor(Color.parseColor(dark ? "#33FF5722" : "#FFF3E0"));
-                pillBg.setStroke((int) (1.5f * getResources().getDisplayMetrics().density), Color.parseColor("#FF5722"));
+                pillBg.setColor(Color.parseColor(dark ? "#33" + ft.startColor.substring(1) : "#15" + ft.startColor.substring(1)));
+                pillBg.setStroke((int) (1.5f * getResources().getDisplayMetrics().density), Color.parseColor(ft.startColor));
             } else {
                 pillBg.setColor(Color.parseColor(dark ? "#1E293B" : "#F1F5F9"));
                 pillBg.setStroke((int) (1f * getResources().getDisplayMetrics().density), Color.parseColor(dark ? "#334155" : "#E2E8F0"));
@@ -483,18 +578,24 @@ public class MainActivity extends Activity {
             pill.setLayoutParams(pLp);
 
             TextView ic = new TextView(this);
-            ic.setText(unlocked ? "🔥" : "🔒");
+            ic.setText(unlocked ? ft.icon : "🔒");
             ic.setTextSize(16);
             ic.setGravity(android.view.Gravity.CENTER);
             pill.addView(ic);
 
             TextView txt = new TextView(this);
-            txt.setText(badge.requiredDays + " ngày");
+            txt.setText(ft.minDays + " ngày");
             txt.setTextSize(11);
             txt.setTypeface(null, android.graphics.Typeface.BOLD);
-            txt.setTextColor(unlocked ? Color.parseColor("#FF5722") : dimColor);
+            txt.setTextColor(unlocked ? Color.parseColor(ft.startColor) : dimColor);
             txt.setGravity(android.view.Gravity.CENTER);
             pill.addView(txt);
+
+            pill.setClickable(true);
+            pill.setFocusable(true);
+            pill.setOnClickListener(v -> {
+                Toast.makeText(this, ft.minDays + " ngày: " + ft.name + " (" + ft.effectDescription + ")", Toast.LENGTH_SHORT).show();
+            });
 
             milestonesRow.addView(pill);
         }
@@ -782,9 +883,9 @@ public class MainActivity extends Activity {
 
         // Streak status in Pet Screen
         StreakManager.StreakInfo petStreak = streakManager.getStreakInfo(goal());
-        StreakManager.StreakBadge petBadge = StreakManager.getCurrentBadge(petStreak.currentStreak);
-        label(R.id.pet_streak_icon, "🔥");
-        label(R.id.pet_streak_title, streakManager.getStreakName() + " • " + petStreak.currentStreak + " ngày");
+        StreakManager.FlameTier petFlame = StreakManager.getFlameTier(petStreak.currentStreak);
+        label(R.id.pet_streak_icon, petFlame.icon);
+        label(R.id.pet_streak_title, streakManager.getStreakName() + " • " + petStreak.currentStreak + " ngày (" + petFlame.name + ")");
         label(R.id.pet_streak_desc, petStreak.isGoalAchievedToday ? "✓ Đã thắp sáng hôm nay" : "⚡ Còn " + petStreak.remainingMl + " ml để giữ lửa");
         click(R.id.pet_streak_card, () -> showStreakDialog(petStreak));
 

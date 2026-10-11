@@ -20,6 +20,73 @@ public class StreakManager {
         int getWaterToday(String dateString);
     }
 
+    public static class FlameTier {
+        public final int minDays;
+        public final String name;
+        public final String icon;
+        public final String startColor;
+        public final String endColor;
+        public final String strokeColor;
+        public final String glowColor;
+        public final String effectDescription;
+
+        public FlameTier(int minDays, String name, String icon, String startColor, String endColor, String strokeColor, String glowColor, String effectDescription) {
+            this.minDays = minDays;
+            this.name = name;
+            this.icon = icon;
+            this.startColor = startColor;
+            this.endColor = endColor;
+            this.strokeColor = strokeColor;
+            this.glowColor = glowColor;
+            this.effectDescription = effectDescription;
+        }
+
+        public boolean isUnlocked(int streak) {
+            return streak >= minDays;
+        }
+    }
+
+    private static final List<FlameTier> ALL_FLAME_TIERS;
+    static {
+        List<FlameTier> tiers = new ArrayList<>();
+        tiers.add(new FlameTier(0, "Ngọn Lửa Khởi Động", "🔥", "#FF6D00", "#FF3D00", "#FFE082", "#FF9800", "Bắt đầu hành trình giữ lửa, uống đủ nước mỗi ngày"));
+        tiers.add(new FlameTier(3, "Ngọn Lửa Lam", "⚡🔥", "#0284C7", "#00E5FF", "#BAE6FD", "#38BDF8", "Mở khóa hiệu ứng Lửa Lam bứt phá 3 ngày liên tiếp!"));
+        tiers.add(new FlameTier(7, "Ngọn Lửa Tím", "✨🔥", "#7E22CE", "#E879F9", "#F5D0FE", "#C084FC", "Mở khóa hiệu ứng Tử Diễm huyền bí bền bỉ 1 tuần!"));
+        tiers.add(new FlameTier(14, "Ngọn Lửa Hoàng Kim", "🌟🔥", "#D97706", "#FDE047", "#FEF08A", "#FBBF24", "Mở khóa hiệu ứng Lửa Vàng Hoàng Kim 2 tuần liên tiếp!"));
+        tiers.add(new FlameTier(30, "Ngọn Lửa Thần Thoại", "👑🔥", "#E11D48", "#FB7185", "#FFE4E6", "#FDA4AF", "Mở khóa hiệu ứng Thần Thoại bất diệt 1 tháng liên tục!"));
+        tiers.add(new FlameTier(50, "Tinh Thể Băng Lửa", "💎🔥", "#0D9488", "#2DD4BF", "#CCFBF1", "#5EEAD4", "Hiệu ứng Tinh Thể Băng Lửa 50 ngày bứt phá giới hạn!"));
+        tiers.add(new FlameTier(100, "Vương Miện Bách Nhật", "🔱🔥", "#4F46E5", "#818CF8", "#E0E7FF", "#A5B4FC", "Hiệu ứng Vương Miện Bách Nhật 100 ngày kỷ luật đỉnh cao!"));
+        tiers.add(new FlameTier(365, "Chiến Binh Bất Diệt", "🔥", "#B91C1C", "#F87171", "#FEE2E2", "#EF4444", "Huyền thoại 1 năm kiên định không ngừng nghỉ!"));
+        ALL_FLAME_TIERS = Collections.unmodifiableList(tiers);
+    }
+
+    public static List<FlameTier> getAllFlameTiers() {
+        return ALL_FLAME_TIERS;
+    }
+
+    public static FlameTier getFlameTier(int streakDays) {
+        FlameTier current = ALL_FLAME_TIERS.get(0);
+        for (FlameTier t : ALL_FLAME_TIERS) {
+            if (streakDays >= t.minDays) {
+                current = t;
+            }
+        }
+        return current;
+    }
+
+    public static FlameTier getNextFlameTier(int streakDays) {
+        for (FlameTier t : ALL_FLAME_TIERS) {
+            if (streakDays < t.minDays) {
+                return t;
+            }
+        }
+        return null;
+    }
+
+    public static boolean isMilestone(int streakDays) {
+        return streakDays == 3 || streakDays == 7 || streakDays == 14 || streakDays == 30 || streakDays == 50 || streakDays == 100 || streakDays == 365;
+    }
+
     public static class StreakBadge {
         public final int requiredDays;
         public final String name;
@@ -43,13 +110,13 @@ public class StreakManager {
     private static final List<StreakBadge> ALL_BADGES;
     static {
         List<StreakBadge> badges = new ArrayList<>();
-        badges.add(new StreakBadge(3, "Tia Lửa Mới", "🔥", "Khởi động 3 ngày liên tiếp", "Đồng"));
-        badges.add(new StreakBadge(7, "Ngọn Lửa Bền Bỉ", "🔥", "Duy trì 1 tuần liên tiếp", "Bạc"));
-        badges.add(new StreakBadge(14, "Bùng Cháy 2 Tuần", "🔥", "2 tuần kiên trì liên tiếp", "Vàng"));
-        badges.add(new StreakBadge(30, "Lửa Vàng Hoàng Kim", "🔥", "1 tháng bền bỉ nuôi dưỡng sức khỏe", "Bạch Kim"));
-        badges.add(new StreakBadge(50, "Tinh Thể Kim Cương", "🔥", "50 ngày bứt phá giới hạn", "Kim Cương"));
-        badges.add(new StreakBadge(100, "Vương Miện Bách Nhật", "🔥", "100 ngày kỷ luật bền bỉ", "Tinh Anh"));
-        badges.add(new StreakBadge(365, "Huyền Thoại Thần Nước", "🔥", "1 năm kiên định không ngừng nghỉ", "Huyền Thoại"));
+        badges.add(new StreakBadge(3, "Ngọn Lửa Lam", "⚡🔥", "Mở khóa hiệu ứng Lửa Lam bứt phá", "Mốc 3 ngày"));
+        badges.add(new StreakBadge(7, "Ngọn Lửa Tím", "✨🔥", "Mở khóa hiệu ứng Tử Diễm huyền bí", "Mốc 7 ngày"));
+        badges.add(new StreakBadge(14, "Ngọn Lửa Hoàng Kim", "🌟🔥", "Mở khóa hiệu ứng Ánh Kim chói lọi", "Mốc 14 ngày"));
+        badges.add(new StreakBadge(30, "Ngọn Lửa Thần Thoại", "👑🔥", "Mở khóa hiệu ứng Thần Thoại bất diệt", "Mốc 30 ngày"));
+        badges.add(new StreakBadge(50, "Tinh Thể Băng Lửa", "💎🔥", "50 ngày bứt phá giới hạn", "Mốc 50 ngày"));
+        badges.add(new StreakBadge(100, "Vương Miện Bách Nhật", "🔱🔥", "100 ngày kỷ luật bền bỉ", "Mốc 100 ngày"));
+        badges.add(new StreakBadge(365, "Chiến Binh Bất Diệt", "🔥", "1 năm kiên định không ngừng nghỉ", "Mốc 1 năm"));
         ALL_BADGES = Collections.unmodifiableList(badges);
     }
 
@@ -58,22 +125,14 @@ public class StreakManager {
     }
 
     public static StreakBadge getCurrentBadge(int currentStreak) {
-        StreakBadge current = new StreakBadge(0, "Ngọn Lửa Khởi Động", "🔥", "Bắt đầu hành trình giữ lửa, uống nước mỗi ngày", "Tập Sự");
-        for (StreakBadge b : ALL_BADGES) {
-            if (currentStreak >= b.requiredDays) {
-                current = b;
-            }
-        }
-        return current;
+        FlameTier t = getFlameTier(currentStreak);
+        return new StreakBadge(t.minDays, t.name, t.icon, t.effectDescription, t.minDays == 0 ? "Khởi Động" : (t.minDays + " ngày"));
     }
 
     public static StreakBadge getNextBadge(int currentStreak) {
-        for (StreakBadge b : ALL_BADGES) {
-            if (currentStreak < b.requiredDays) {
-                return b;
-            }
-        }
-        return null; // All badges unlocked
+        FlameTier t = getNextFlameTier(currentStreak);
+        if (t == null) return null;
+        return new StreakBadge(t.minDays, t.name, t.icon, t.effectDescription, t.minDays + " ngày");
     }
 
     private DatabaseHelper db;
