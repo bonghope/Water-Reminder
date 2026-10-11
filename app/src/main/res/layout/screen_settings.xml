@@ -1,15 +1,106 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
   <TextView style="@style/Aqua.Title" android:text="Cài đặt" />
   <TextView style="@style/Aqua.Caption" android:text="Một nhịp uống nước phù hợp với bạn." />
+
+  <!-- Card 1: Mục tiêu mỗi ngày -->
   <LinearLayout style="@style/Aqua.Card" android:orientation="vertical">
-    <TextView style="@style/Aqua.Text" android:text="Mục tiêu mỗi ngày" />
+    <TextView style="@style/Aqua.Text" android:text="Mục tiêu mỗi ngày" android:textStyle="bold" />
     <TextView android:id="@+id/goal_button" style="@style/Aqua.Button" android:text="" />
-    <Switch android:id="@+id/theme_switch" style="@style/Aqua.Text" android:minHeight="48dp" android:text="Giao diện tối" />
   </LinearLayout>
-  <include layout="@layout/view_interval" />
+
+  <!-- Card 2: Thông báo nhắc nhở -->
   <LinearLayout style="@style/Aqua.Card" android:orientation="vertical">
-    <TextView style="@style/Aqua.Title" android:text="Aqua • Water Reminder" />
-    <TextView style="@style/Aqua.Text" android:text="Phiên bản 1.0\nDữ liệu được lưu trên thiết bị.\nHoạt động hoàn toàn ngoại tuyến." />
+    <TextView style="@style/Aqua.Text" android:text="Nhắc nhở uống nước" android:textStyle="bold" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingTop="6dp">
+      <LinearLayout
+          android:layout_width="0dp"
+          android:layout_height="wrap_content"
+          android:layout_weight="1"
+          android:orientation="vertical">
+        <TextView
+            style="@style/Aqua.Text"
+            android:text="Bật thông báo nhắc nhở"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+        <TextView
+            style="@style/Aqua.Caption"
+            android:text="Nhắc nhở đều đặn theo chu kỳ bạn chọn"
+            android:textSize="12sp" />
+      </LinearLayout>
+      <Switch
+          android:id="@+id/settings_reminder_switch"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:minHeight="48dp" />
+    </LinearLayout>
+  </LinearLayout>
+
+  <!-- Khoảng cách giữa các lần nhắc: Chỉ hiển thị khi bật thông báo! -->
+  <include layout="@layout/view_interval" />
+
+  <!-- Card 3: Giao diện hiển thị / Chế độ tối (nằm ngay trên Aqua dưới cùng) -->
+  <LinearLayout style="@style/Aqua.Card" android:orientation="vertical">
+    <TextView style="@style/Aqua.Text" android:text="Giao diện hiển thị" android:textStyle="bold" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingTop="6dp">
+      <LinearLayout
+          android:layout_width="0dp"
+          android:layout_height="wrap_content"
+          android:layout_weight="1"
+          android:orientation="vertical">
+        <TextView
+            style="@style/Aqua.Text"
+            android:text="Chế độ tối"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+        <TextView
+            style="@style/Aqua.Caption"
+            android:text="Dịu mắt vào ban đêm và tiết kiệm pin"
+            android:textSize="12sp" />
+      </LinearLayout>
+      <Switch
+          android:id="@+id/theme_switch"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:minHeight="48dp" />
+    </LinearLayout>
+  </LinearLayout>
+
+  <!-- Giới thiệu Aqua: Dòng bé bé dưới cùng, không phải Card to -->
+  <LinearLayout
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:orientation="vertical"
+      android:gravity="center_horizontal"
+      android:paddingTop="28dp"
+      android:paddingBottom="42dp">
+    <TextView
+        style="@style/Aqua.Caption"
+        android:text="Aqua • Water Reminder"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:textColor="@color/aqua_muted"
+        android:gravity="center" />
+    <TextView
+        style="@style/Aqua.Caption"
+        android:text="Phiên bản 1.0 • Dữ liệu lưu trên thiết bị • Hoạt động ngoại tuyến"
+        android:textSize="11sp"
+        android:textColor="@color/aqua_muted"
+        android:gravity="center"
+        android:paddingTop="3dp" />
   </LinearLayout>
 </LinearLayout>

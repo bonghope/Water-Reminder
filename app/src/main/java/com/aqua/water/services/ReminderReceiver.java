@@ -115,7 +115,7 @@ public class ReminderReceiver extends BroadcastReceiver {
                     : new Notification.Builder(context);
             builder.setSmallIcon(android.R.drawable.ic_dialog_info)
                     .setContentTitle("Đến giờ uống nước!")
-                    .setContentText("Một ly nước nhỏ giúp bạn luôn tươi tỉnh. 💧")
+                    .setContentText("Một ly nước nhỏ giúp bạn luôn tươi tỉnh.")
                     .setCategory(Notification.CATEGORY_REMINDER)
                     .setAutoCancel(true).setContentIntent(open);
             if (Build.VERSION.SDK_INT < 26) builder.setDefaults(Notification.DEFAULT_ALL);
