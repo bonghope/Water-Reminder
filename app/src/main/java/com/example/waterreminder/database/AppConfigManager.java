@@ -56,5 +56,5 @@ public class AppConfigManager {
         ReminderReceiver.restart(context);
     }
     public boolean isThemeDark() { return prefs.getBoolean(KEY_THEME_DARK, false); }
-    public void setThemeDark(boolean dark) { prefs.edit().putBoolean(KEY_THEME_DARK, dark).apply(); }
+    public void setThemeDark(boolean dark) { prefs.edit().putBoolean(KEY_THEME_DARK, dark).commit(); }
 }

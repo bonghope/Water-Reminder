@@ -12,10 +12,13 @@ import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
+import android.view.MotionEvent;
+import android.view.HapticFeedbackConstants;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
 import android.widget.*;
 import com.aqua.water.R;
+import com.aqua.water.database.StreakManager;
 import com.aqua.water.database.WaterStore;
 import com.aqua.water.services.ReminderReceiver;
 import com.example.waterreminder.database.AppConfigManager;
@@ -27,6 +30,7 @@ import java.util.Locale;
 /** Binds the XML screens to local data and user actions. */
 public class MainActivity extends Activity {
     private WaterStore db;
+    private StreakManager streakManager;
     private SharedPreferences prefs;
     private AppConfigManager config;
     private WaterView waterView;
@@ -34,21 +38,27 @@ public class MainActivity extends Activity {
     private int tab;
     private int selectedDrink = 1;
     private boolean addCardVisible = true;
+    private float floatingStreakX = -1, floatingStreakY = -1;
     private final int[] screens = {R.layout.screen_home, R.layout.screen_history, R.layout.screen_stats,
             R.layout.screen_pet, R.layout.screen_reminders, R.layout.screen_settings};
     private final int[] navigation = {R.id.nav_0, R.id.nav_1, R.id.nav_2, R.id.nav_3, R.id.nav_4, R.id.nav_5};
 
-    @Override public void onCreate(Bundle state) {
+        @Override public void onCreate(Bundle state) {
+        prefs = getSharedPreferences("AppConfig", 0);
+        boolean dark = prefs.getBoolean("THEME_DARK", false);
+        setTheme(dark ? R.style.Theme_Aqua_Dark : R.style.Theme_Aqua);
         super.onCreate(state);
         db = new WaterStore(this);
+        streakManager = new StreakManager(this);
         config = new AppConfigManager(this);
-        prefs = getSharedPreferences("AppConfig", 0);
         if (state != null) {
             tab = Math.max(0, Math.min(screens.length - 1, state.getInt("tab", 0)));
             week = state.getBoolean("week", false);
             month = state.getBoolean("month", false);
             selectedDrink = Math.max(1, Math.min(4, state.getInt("selectedDrink", 1)));
             addCardVisible = state.getBoolean("addCardVisible", true);
+            floatingStreakX = state.getFloat("floatingStreakX", -1);
+            floatingStreakY = state.getFloat("floatingStreakY", -1);
         }
         show();
     }
@@ -63,24 +73,37 @@ public class MainActivity extends Activity {
         if (waterView != null) waterView.setActive(false);
         super.onPause();
     }
-    @Override protected void onDestroy() { db.close(); super.onDestroy(); }
-    @Override protected void onSaveInstanceState(Bundle state) {
+    @Override protected void onDestroy() {
+        if (db != null) db.close();
+        if (streakManager != null) streakManager.close();
+        super.onDestroy();
+    }
+        @Override protected void onSaveInstanceState(Bundle state) {
         super.onSaveInstanceState(state);
-        state.putInt("tab", tab); state.putBoolean("week", week); state.putBoolean("month", month);
+        state.putInt("tab", tab);
+        state.putBoolean("week", week);
+        state.putBoolean("month", month);
         state.putInt("selectedDrink", selectedDrink);
         state.putBoolean("addCardVisible", addCardVisible);
+        state.putFloat("floatingStreakX", floatingStreakX);
+        state.putFloat("floatingStreakY", floatingStreakY);
     }
 
     private int goal() { return Math.max(1, prefs.getInt("WATER_GOAL", 2000)); }
     private int total() { return db.total(WaterStore.date(System.currentTimeMillis())); }
-    private void label(int id, String value) { ((TextView) findViewById(id)).setText(value); }
-    private void click(int id, Runnable action) { findViewById(id).setOnClickListener(v -> action.run()); }
+    private void label(int id, String value) {
+        TextView tv = findViewById(id);
+        if (tv != null) tv.setText(value);
+    }
+    private void click(int id, Runnable action) {
+        View v = findViewById(id);
+        if (v != null) v.setOnClickListener(view -> action.run());
+    }
 
     private void show() {
         WaterView previousWater = waterView;
         if (previousWater != null) previousWater.setActive(false);
         boolean dark = prefs.getBoolean("THEME_DARK", false);
-        setTheme(dark ? R.style.Theme_Aqua_Dark : R.style.Theme_Aqua);
         setContentView(R.layout.activity_main);
         if (Build.VERSION.SDK_INT >= 30) getWindow().setDecorFitsSystemWindows(false);
         getWindow().setStatusBarColor(Color.TRANSPARENT);
@@ -110,9 +133,77 @@ public class MainActivity extends Activity {
         View header = findViewById(R.id.page_header);
         int headerPadding = tab == 0 ? horizontalPadding : 0;
         header.setPadding(headerPadding, 0, headerPadding, 0);
+
+        // Draggable Floating Streak Flame & Tier Badge
+        StreakManager.StreakInfo headerStreak = streakManager.getStreakInfo(goal());
+        StreakManager.StreakBadge currentBadge = StreakManager.getCurrentBadge(headerStreak.currentStreak);
+        label(R.id.header_streak_icon, "🔥");
+        label(R.id.header_streak_text, String.valueOf(headerStreak.currentStreak));
+        View floatingBadge = findViewById(R.id.floating_streak_badge);
+        if (floatingBadge != null) {
+            if (floatingStreakX >= 0 && floatingStreakY >= 0) {
+                floatingBadge.setX(floatingStreakX);
+                floatingBadge.setY(floatingStreakY);
+            }
+            floatingBadge.post(() -> {
+                if (floatingStreakX >= 0 && floatingStreakY >= 0) {
+                    floatingBadge.setX(floatingStreakX);
+                    floatingBadge.setY(floatingStreakY);
+                }
+            });
+            floatingBadge.setOnTouchListener(new View.OnTouchListener() {
+                private float dX, dY, startX, startY;
+                private boolean isDragging;
+
+                @Override
+                public boolean onTouch(View view, MotionEvent event) {
+                    switch (event.getActionMasked()) {
+                        case MotionEvent.ACTION_DOWN:
+                            dX = view.getX() - event.getRawX();
+                            dY = view.getY() - event.getRawY();
+                            startX = event.getRawX();
+                            startY = event.getRawY();
+                            isDragging = false;
+                            view.animate().scaleX(1.15f).scaleY(1.15f).setDuration(100).start();
+                            return true;
+
+                        case MotionEvent.ACTION_MOVE:
+                            float dist = (float) Math.hypot(event.getRawX() - startX, event.getRawY() - startY);
+                            if (dist > 12) isDragging = true;
+                            if (isDragging) {
+                                float newX = event.getRawX() + dX;
+                                float newY = event.getRawY() + dY;
+                                View parent = (View) view.getParent();
+                                if (parent != null) {
+                                    float maxX = parent.getWidth() - view.getWidth();
+                                    float maxY = parent.getHeight() - view.getHeight() - (75 * getResources().getDisplayMetrics().density);
+                                    float minY = 20 * getResources().getDisplayMetrics().density;
+                                    newX = Math.max(0, Math.min(newX, maxX));
+                                    newY = Math.max(minY, Math.min(newY, maxY));
+                                }
+                                view.setX(newX);
+                                view.setY(newY);
+                                floatingStreakX = newX;
+                                floatingStreakY = newY;
+                            }
+                            return true;
+
+                        case MotionEvent.ACTION_UP:
+                        case MotionEvent.ACTION_CANCEL:
+                            view.animate().scaleX(1.0f).scaleY(1.0f).setDuration(120).start();
+                            if (!isDragging) {
+                                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+                                showStreakDialog(headerStreak);
+                            }
+                            return true;
+                    }
+                    return false;
+                }
+            });
+        }
+
         FrameLayout content = findViewById(R.id.screen_container);
         getLayoutInflater().inflate(screens[tab], content, true);
-        label(R.id.header_date, new SimpleDateFormat("dd MMM", new Locale("vi")).format(new Date()));
         FrameLayout scene = findViewById(R.id.scene);
         WaterView inflatedWater = findViewById(R.id.water);
         waterView = null;
@@ -136,8 +227,12 @@ public class MainActivity extends Activity {
             item.setOnClickListener(v -> { tab = next; show(); });
         }
         click(R.id.nav_add_water, () -> {
-            tab = 0;
-            addCardVisible = true;
+            if (tab == 0) {
+                addCardVisible = !addCardVisible;
+            } else {
+                tab = 0;
+                addCardVisible = true;
+            }
             show();
         });
         switch (tab) {
@@ -160,6 +255,8 @@ public class MainActivity extends Activity {
         label(R.id.home_percent, Math.round(percentage) + "%");
         label(R.id.home_amount, amount + " / " + waterGoal + " ml");
         label(R.id.home_remaining, "Còn " + remaining + " ml để đạt mục tiêu");
+
+
         int[] drinkIds = {R.id.ivWater, R.id.ivTea, R.id.ivSweet, R.id.ivMilk};
         for (int i = 0; i < drinkIds.length; i++) {
             final int category = i + 1;
@@ -195,16 +292,277 @@ public class MainActivity extends Activity {
     }
 
     private void add(int amount) {
+        int before = total();
+        int target = goal();
         String[] types = {"Nước lọc", "Trà", "Nước ngọt", "Sữa"};
         db.add(amount, types[selectedDrink - 1]);
-        Toast.makeText(this, "Thêm thành công!", Toast.LENGTH_SHORT).show();
+        int after = total();
+
+        addCardVisible = false;
+        if (before < target && after >= target) {
+            StreakManager.StreakInfo newStreak = streakManager.getStreakInfo(target);
+            showCelebrationDialog(newStreak);
+        } else {
+            Toast.makeText(this, "Thêm " + amount + " ml thành công!", Toast.LENGTH_SHORT).show();
+        }
         show();
     }
 
+        private void showCelebrationDialog(StreakManager.StreakInfo info) {
+        StreakManager.StreakBadge badge = StreakManager.getCurrentBadge(info.currentStreak);
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        int padding = (int) (22 * getResources().getDisplayMetrics().density);
+        layout.setPadding(padding, padding, padding, padding);
+
+        TextView tvTitle = new TextView(this);
+        tvTitle.setText("Hoàn thành mục tiêu hôm nay!");
+        tvTitle.setTextSize(18);
+        tvTitle.setTextColor(Color.parseColor("#ff5722"));
+        tvTitle.setTypeface(null, android.graphics.Typeface.BOLD);
+        tvTitle.setGravity(android.view.Gravity.CENTER);
+        layout.addView(tvTitle);
+
+        boolean dark = prefs.getBoolean("THEME_DARK", false);
+        int primaryColor = dark ? Color.parseColor("#E4F5FF") : Color.parseColor("#183E64");
+
+        TextView tvMsg = new TextView(this);
+        tvMsg.setText("\nChuỗi \"" + streakManager.getStreakName() + "\" đạt " + info.currentStreak + " ngày.\n\nHuy hiệu: " + badge.name + " (" + badge.rankName + ")\n\nThú cưng đã đạt Cấp 4: Đại Tướng Thần Nước.\n\nHãy tiếp tục duy trì vào ngày mai nhé.");
+        tvMsg.setTextSize(14);
+        tvMsg.setTextColor(primaryColor);
+        tvMsg.setGravity(android.view.Gravity.CENTER);
+        layout.addView(tvMsg);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setView(layout)
+                .setPositiveButton("Đồng ý", (d, w) -> d.dismiss())
+                .create();
+        showRoundedDialog(dialog);
+    }
+
+    private void showStreakDialog(StreakManager.StreakInfo info) {
+        boolean dark = prefs.getBoolean("THEME_DARK", false);
+        int primaryColor = dark ? Color.parseColor("#E4F5FF") : Color.parseColor("#183E64");
+        int secondaryColor = dark ? Color.parseColor("#A2BFD0") : Color.parseColor("#7393AA");
+        int accentColor = dark ? Color.parseColor("#38BDF8") : Color.parseColor("#0284C7");
+        int dimColor = dark ? Color.parseColor("#64748B") : Color.parseColor("#94A3B8");
+
+        StreakManager.StreakBadge nextBadge = StreakManager.getNextBadge(info.currentStreak);
+
+        ScrollView scroll = new ScrollView(this);
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setGravity(android.view.Gravity.CENTER_HORIZONTAL);
+        int padding = (int) (20 * getResources().getDisplayMetrics().density);
+        layout.setPadding(padding, padding, padding, padding);
+        scroll.addView(layout);
+
+        // 1. Tên Chuỗi (gọn gàng, kèm icon đổi tên)
+        LinearLayout nameRow = new LinearLayout(this);
+        nameRow.setOrientation(LinearLayout.HORIZONTAL);
+        nameRow.setGravity(android.view.Gravity.CENTER);
+        nameRow.setPadding(0, 0, 0, (int) (8 * getResources().getDisplayMetrics().density));
+
+        TextView tvStreakName = new TextView(this);
+        tvStreakName.setText(streakManager.getStreakName());
+        tvStreakName.setTextSize(17);
+        tvStreakName.setTypeface(null, android.graphics.Typeface.BOLD);
+        tvStreakName.setTextColor(primaryColor);
+        nameRow.addView(tvStreakName);
+
+        TextView tvEdit = new TextView(this);
+        tvEdit.setText(" ✎");
+        tvEdit.setTextSize(16);
+        tvEdit.setTextColor(Color.parseColor("#FF5722"));
+        tvEdit.setPadding((int) (4 * getResources().getDisplayMetrics().density), 0, 0, 0);
+        nameRow.addView(tvEdit);
+        nameRow.setClickable(true);
+        nameRow.setFocusable(true);
+        nameRow.setOnClickListener(v -> promptChangeStreakName(info));
+        layout.addView(nameRow);
+
+        // 2. Biểu tượng ngọn lửa lớn
+        TextView tvFire = new TextView(this);
+        tvFire.setText("🔥");
+        tvFire.setTextSize(50);
+        tvFire.setGravity(android.view.Gravity.CENTER);
+        layout.addView(tvFire);
+
+        // 3. Số ngày chuỗi to rõ kiểu TikTok
+        TextView tvCount = new TextView(this);
+        tvCount.setText(String.valueOf(info.currentStreak));
+        tvCount.setTextSize(40);
+        tvCount.setTypeface(null, android.graphics.Typeface.BOLD);
+        tvCount.setTextColor(Color.parseColor("#FF5722"));
+        tvCount.setGravity(android.view.Gravity.CENTER);
+        layout.addView(tvCount);
+
+        TextView tvUnit = new TextView(this);
+        tvUnit.setText("NGÀY LIÊN TIẾP");
+        tvUnit.setTextSize(13);
+        tvUnit.setTypeface(null, android.graphics.Typeface.BOLD);
+        tvUnit.setTextColor(primaryColor);
+        tvUnit.setGravity(android.view.Gravity.CENTER);
+        layout.addView(tvUnit);
+
+        TextView tvBest = new TextView(this);
+        tvBest.setText("Kỷ lục: " + info.bestStreak + " ngày");
+        tvBest.setTextSize(12);
+        tvBest.setTextColor(secondaryColor);
+        tvBest.setGravity(android.view.Gravity.CENTER);
+        tvBest.setPadding(0, (int) (2 * getResources().getDisplayMetrics().density), 0, (int) (12 * getResources().getDisplayMetrics().density));
+        layout.addView(tvBest);
+
+        // 4. Trạng thái 1 câu ngắn gọn kiểu TikTok
+        TextView tvStatusPill = new TextView(this);
+        tvStatusPill.setGravity(android.view.Gravity.CENTER);
+        int pillPadH = (int) (14 * getResources().getDisplayMetrics().density);
+        int pillPadV = (int) (8 * getResources().getDisplayMetrics().density);
+        tvStatusPill.setPadding(pillPadH, pillPadV, pillPadH, pillPadV);
+        tvStatusPill.setTextSize(13);
+        tvStatusPill.setTypeface(null, android.graphics.Typeface.BOLD);
+
+        android.graphics.drawable.GradientDrawable statusBg = new android.graphics.drawable.GradientDrawable();
+        statusBg.setCornerRadius(20 * getResources().getDisplayMetrics().density);
+        if (info.isGoalAchievedToday) {
+            tvStatusPill.setText("✓ Đã thắp sáng hôm nay!");
+            tvStatusPill.setTextColor(Color.parseColor("#16A34A"));
+            statusBg.setColor(Color.parseColor(dark ? "#2616A34A" : "#DCFCE7"));
+        } else {
+            tvStatusPill.setText("⚡ Còn " + info.remainingMl + " ml để giữ lửa!");
+            tvStatusPill.setTextColor(Color.parseColor("#EA580C"));
+            statusBg.setColor(Color.parseColor(dark ? "#26EA580C" : "#FFEDD5"));
+        }
+        tvStatusPill.setBackground(statusBg);
+        layout.addView(tvStatusPill);
+
+        // 5. Mốc huy hiệu TikTok (Hàng ngang đơn giản, không văn vở)
+        TextView tvNextMilestone = new TextView(this);
+        if (nextBadge != null) {
+            int remainingDays = nextBadge.requiredDays - info.currentStreak;
+            tvNextMilestone.setText("Mốc tiếp theo: " + nextBadge.requiredDays + " ngày (còn " + remainingDays + " ngày)");
+        } else {
+            tvNextMilestone.setText("Đã chinh phục mọi mốc chuỗi! 👑");
+        }
+        tvNextMilestone.setTextSize(12);
+        tvNextMilestone.setTypeface(null, android.graphics.Typeface.BOLD);
+        tvNextMilestone.setTextColor(accentColor);
+        tvNextMilestone.setGravity(android.view.Gravity.CENTER);
+        tvNextMilestone.setPadding(0, (int) (16 * getResources().getDisplayMetrics().density), 0, (int) (8 * getResources().getDisplayMetrics().density));
+        layout.addView(tvNextMilestone);
+
+        HorizontalScrollView hScroll = new HorizontalScrollView(this);
+        hScroll.setHorizontalScrollBarEnabled(false);
+        LinearLayout milestonesRow = new LinearLayout(this);
+        milestonesRow.setOrientation(LinearLayout.HORIZONTAL);
+        milestonesRow.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        milestonesRow.setPadding((int) (4 * getResources().getDisplayMetrics().density), (int) (4 * getResources().getDisplayMetrics().density), (int) (4 * getResources().getDisplayMetrics().density), (int) (10 * getResources().getDisplayMetrics().density));
+
+        for (StreakManager.StreakBadge badge : StreakManager.getAllBadges()) {
+            boolean unlocked = badge.isUnlocked(info.currentStreak);
+            LinearLayout pill = new LinearLayout(this);
+            pill.setOrientation(LinearLayout.VERTICAL);
+            pill.setGravity(android.view.Gravity.CENTER);
+            int itemPadH = (int) (12 * getResources().getDisplayMetrics().density);
+            int itemPadV = (int) (8 * getResources().getDisplayMetrics().density);
+            pill.setPadding(itemPadH, itemPadV, itemPadH, itemPadV);
+
+            android.graphics.drawable.GradientDrawable pillBg = new android.graphics.drawable.GradientDrawable();
+            pillBg.setCornerRadius(14 * getResources().getDisplayMetrics().density);
+            if (unlocked) {
+                pillBg.setColor(Color.parseColor(dark ? "#33FF5722" : "#FFF3E0"));
+                pillBg.setStroke((int) (1.5f * getResources().getDisplayMetrics().density), Color.parseColor("#FF5722"));
+            } else {
+                pillBg.setColor(Color.parseColor(dark ? "#1E293B" : "#F1F5F9"));
+                pillBg.setStroke((int) (1f * getResources().getDisplayMetrics().density), Color.parseColor(dark ? "#334155" : "#E2E8F0"));
+            }
+            pill.setBackground(pillBg);
+
+            LinearLayout.LayoutParams pLp = new LinearLayout.LayoutParams(-2, -2);
+            pLp.rightMargin = (int) (8 * getResources().getDisplayMetrics().density);
+            pill.setLayoutParams(pLp);
+
+            TextView ic = new TextView(this);
+            ic.setText(unlocked ? "🔥" : "🔒");
+            ic.setTextSize(16);
+            ic.setGravity(android.view.Gravity.CENTER);
+            pill.addView(ic);
+
+            TextView txt = new TextView(this);
+            txt.setText(badge.requiredDays + " ngày");
+            txt.setTextSize(11);
+            txt.setTypeface(null, android.graphics.Typeface.BOLD);
+            txt.setTextColor(unlocked ? Color.parseColor("#FF5722") : dimColor);
+            txt.setGravity(android.view.Gravity.CENTER);
+            pill.addView(txt);
+
+            milestonesRow.addView(pill);
+        }
+        hScroll.addView(milestonesRow);
+        layout.addView(hScroll);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setView(scroll)
+                .setNegativeButton("Đổi tên", (d, w) -> promptChangeStreakName(info))
+                .setPositiveButton("Đóng", null)
+                .create();
+        showRoundedDialog(dialog);
+    }
+
+    private void promptChangeStreakName(StreakManager.StreakInfo info) {
+        boolean dark = prefs.getBoolean("THEME_DARK", false);
+        int primaryColor = dark ? Color.parseColor("#E4F5FF") : Color.parseColor("#183E64");
+        int secondaryColor = dark ? Color.parseColor("#A2BFD0") : Color.parseColor("#7393AA");
+
+        EditText input = new EditText(this);
+        input.setSingleLine(true);
+        input.setText(streakManager.getStreakName());
+        input.setSelection(input.getText().length());
+        input.setHint("Nhập tên chuỗi...");
+        input.setTextColor(primaryColor);
+        input.setHintTextColor(secondaryColor);
+
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        int pad = (int) (20 * getResources().getDisplayMetrics().density);
+        box.setPadding(pad, pad, pad, 0);
+
+        TextView tvGuide = new TextView(this);
+        tvGuide.setText("Đặt tên cho chuỗi ngày của bạn:");
+        tvGuide.setTextColor(secondaryColor);
+        tvGuide.setTextSize(13);
+        tvGuide.setPadding(0, 0, 0, 10);
+        box.addView(tvGuide);
+        box.addView(input);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Đổi tên chuỗi")
+                .setView(box)
+                .setNegativeButton("Hủy", null)
+                .setPositiveButton("Lưu", (d, w) -> {
+                    String name = input.getText().toString().trim();
+                    if (!name.isEmpty()) {
+                        streakManager.setStreakName(name);
+                        Toast.makeText(this, "Đã lưu tên chuỗi: " + streakManager.getStreakName(), Toast.LENGTH_SHORT).show();
+                        show();
+                        showStreakDialog(streakManager.getStreakInfo(goal()));
+                    }
+                })
+                .create();
+        showRoundedDialog(dialog);
+    }
+
     private void number(String title, int initial, boolean isGoal) {
+        boolean dark = prefs.getBoolean("THEME_DARK", false);
+        int primaryColor = dark ? Color.parseColor("#E4F5FF") : Color.parseColor("#183E64");
+        int secondaryColor = dark ? Color.parseColor("#A2BFD0") : Color.parseColor("#7393AA");
+
         EditText input = new EditText(this);
         input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
         if (initial > 0) input.setText(String.valueOf(initial));
+        input.setTextColor(primaryColor);
+        input.setHintTextColor(secondaryColor);
+
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
         int padding = (int) (20 * getResources().getDisplayMetrics().density);
@@ -231,6 +589,29 @@ public class MainActivity extends Activity {
             window.setBackgroundDrawable(getDrawable(R.drawable.bg_card));
             window.getDecorView().setClipToOutline(true);
         }
+        boolean dark = prefs.getBoolean("THEME_DARK", false);
+        int primaryColor = dark ? Color.parseColor("#E4F5FF") : Color.parseColor("#183E64");
+        int accentColor = dark ? Color.parseColor("#38BDF8") : Color.parseColor("#00A6D7");
+        int secondaryColor = dark ? Color.parseColor("#A2BFD0") : Color.parseColor("#7393AA");
+
+        int titleId = getResources().getIdentifier("alertTitle", "id", "android");
+        if (titleId > 0 && dialog.findViewById(titleId) instanceof TextView) {
+            ((TextView) dialog.findViewById(titleId)).setTextColor(primaryColor);
+        }
+        int messageId = getResources().getIdentifier("message", "id", "android");
+        if (messageId > 0 && dialog.findViewById(messageId) instanceof TextView) {
+            ((TextView) dialog.findViewById(messageId)).setTextColor(secondaryColor);
+        }
+
+        android.widget.Button posBtn = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+        if (posBtn != null) {
+            posBtn.setTextColor(accentColor);
+            posBtn.setTypeface(null, android.graphics.Typeface.BOLD);
+        }
+        android.widget.Button negBtn = dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
+        if (negBtn != null) {
+            negBtn.setTextColor(secondaryColor);
+        }
     }
 
     private void bindHistory() {
@@ -248,8 +629,8 @@ public class MainActivity extends Activity {
                 count++;
                 long id = cursor.getLong(0);
                 View item = getLayoutInflater().inflate(R.layout.item_water_log, list, false);
-                ((TextView) item.findViewById(R.id.log_amount)).setText("💧 " + cursor.getInt(1) + " ml • " + cursor.getString(2));
-                ((TextView) item.findViewById(R.id.log_time)).setText(new SimpleDateFormat(range ? "dd/MM · HH:mm" : "HH:mm",
+                ((TextView) item.findViewById(R.id.log_amount)).setText(cursor.getInt(1) + " ml • " + cursor.getString(2));
+                ((TextView) item.findViewById(R.id.log_time)).setText(new SimpleDateFormat(range ? "dd/MM – HH:mm" : "HH:mm",
                         Locale.getDefault()).format(new Date(cursor.getLong(3))));
                 int amount = cursor.getInt(1);
                 String type = cursor.getString(2);
@@ -314,6 +695,8 @@ public class MainActivity extends Activity {
         }
         ((WaterChartView) findViewById(R.id.water_chart)).setData(values, labels, goal());
         label(R.id.chart_goal, "Đường nét đứt: mục tiêu " + goal() + " ml");
+
+        
         label(R.id.stats_average, "Trung bình " + sum / days + " ml / ngày");
         label(R.id.stats_success, "Đạt mục tiêu " + success + " / " + days + " ngày");
         label(R.id.stats_total, "Tổng lượng nước " + sum + " ml");
@@ -332,7 +715,7 @@ public class MainActivity extends Activity {
         }
     }
 
-    // Xử lý M2.1: Tiến độ uống nước & Tiến hóa linh vật giọt nước (Tích hợp logic từ nhacuongnuoc)
+    // Xử lý M2.1: Tiến độ uống nước & Tiến hóa linh vật giọt nước 4 cấp độ
     private void updateProgressAndMascot(int currentWater, int waterGoal) {
         int remaining = Math.max(0, waterGoal - currentWater);
         float percentage = ((float) currentWater / Math.max(1, waterGoal)) * 100f;
@@ -341,23 +724,23 @@ public class MainActivity extends Activity {
         String levelName;
         String levelDesc;
 
-        // Logic tiến hóa giọt nước theo 4 mốc phần trăm: <30%, <70%, <100%, >=100%
+        // 4 cấp độ tiến hóa: <30% (Lv.1), <70% (Lv.2), <100% (Lv.3), >=100% (Lv.4)
         if (percentage < 30f) {
             level = 0;
-            levelName = "Giọt nước nhỏ (Lv.1)";
-            levelDesc = "Cấp 1 • Mới khởi đầu (" + Math.round(percentage) + "%) • Còn lại: " + remaining + " ml";
+            levelName = "Mầm Nước (Cấp 1)";
+            levelDesc = "Cấp 1 • Giai đoạn mầm nước (" + Math.round(percentage) + "%) • Còn: " + remaining + " ml";
         } else if (percentage < 70f) {
             level = 1;
-            levelName = "Giọt nước vui vẻ (Lv.2)";
-            levelDesc = "Cấp 2 • Đang lớn (" + Math.round(percentage) + "%) • Còn lại: " + remaining + " ml";
+            levelName = "Bé Nước (Cấp 2)";
+            levelDesc = "Cấp 2 • Giai đoạn bé nước (" + Math.round(percentage) + "%) • Còn: " + remaining + " ml";
         } else if (percentage < 100f) {
             level = 2;
-            levelName = "Giọt nước khỏe mạnh (Lv.3)";
-            levelDesc = "Cấp 3 • Sắp về đích (" + Math.round(percentage) + "%) • Còn lại: " + remaining + " ml";
+            levelName = "Giọt Nước (Cấp 3)";
+            levelDesc = "Cấp 3 • Giai đoạn giọt nước (" + Math.round(percentage) + "%) • Còn: " + remaining + " ml";
         } else {
             level = 3;
-            levelName = "Giọt nước rực rỡ (Lv.4)";
-            levelDesc = "Cấp 4 • Đạt mục tiêu (" + Math.round(percentage) + "%) • Chúc mừng bạn 🎉";
+            levelName = "Chiến Binh Nước (Cấp 4)";
+            levelDesc = "Cấp 4 • Đạt 100% mục tiêu hôm nay (" + Math.round(percentage) + "%)";
         }
 
         label(R.id.pet_name, levelName);
@@ -377,21 +760,71 @@ public class MainActivity extends Activity {
 
     private void bindPet() {
         updateProgressAndMascot(total(), goal());
-        click(R.id.pet_small, () -> Toast.makeText(this, "Lv.1: Dưới 30% mục tiêu", Toast.LENGTH_SHORT).show());
-        click(R.id.pet_healthy, () -> Toast.makeText(this, "Lv.3: Đạt từ 70% đến 99% mục tiêu", Toast.LENGTH_SHORT).show());
-        click(R.id.pet_bright, () -> Toast.makeText(this, "Lv.4: Hoàn thành 100% mục tiêu ngày", Toast.LENGTH_SHORT).show());
+
+        // Mascot touch interactive dialogue
+        PetView petView = findViewById(R.id.pet_mascot);
+        if (petView != null) {
+            petView.setOnPetClickListener(lv -> {
+                String dialogue;
+                switch (lv) {
+                    case 1: dialogue = "Tớ là Bé Nước, tớ biết đi rồi nè!"; break;
+                    case 2: dialogue = "Tớ là Giọt Nước, sắp về đích rồi cố lên bạn ơi!"; break;
+                    case 3: dialogue = "Chiến Binh Nước! Cảm ơn bạn đã hoàn thành xuất sắc hôm nay."; break;
+                    default: dialogue = "Tớ là Mầm Nước, hãy bổ sung thêm nước nhé."; break;
+                }
+                TextView tvDiag = findViewById(R.id.pet_dialogue);
+                if (tvDiag != null) {
+                    tvDiag.setText(dialogue);
+                }
+                Toast.makeText(this, dialogue, Toast.LENGTH_SHORT).show();
+            });
+        }
+
+        // Streak status in Pet Screen
+        StreakManager.StreakInfo petStreak = streakManager.getStreakInfo(goal());
+        StreakManager.StreakBadge petBadge = StreakManager.getCurrentBadge(petStreak.currentStreak);
+        label(R.id.pet_streak_icon, "🔥");
+        label(R.id.pet_streak_title, streakManager.getStreakName() + " • " + petStreak.currentStreak + " ngày");
+        label(R.id.pet_streak_desc, petStreak.isGoalAchievedToday ? "✓ Đã thắp sáng hôm nay" : "⚡ Còn " + petStreak.remainingMl + " ml để giữ lửa");
+        click(R.id.pet_streak_card, () -> showStreakDialog(petStreak));
+
+        // 4 Evolution Levels
+        click(R.id.pet_small, () -> previewPetLevel(0, "Cấp 1: Mầm Nước (< 30% mục tiêu)"));
+        click(R.id.pet_growing, () -> previewPetLevel(1, "Cấp 2: Bé Nước (30% - 69% mục tiêu)"));
+        click(R.id.pet_healthy, () -> previewPetLevel(2, "Cấp 3: Giọt Nước (70% - 99% mục tiêu)"));
+        click(R.id.pet_bright, () -> previewPetLevel(3, "Cấp 4: Chiến Binh Nước (>= 100% mục tiêu)"));
+    }
+
+    private void previewPetLevel(int previewLevel, String msg) {
+        PetView pv = findViewById(R.id.pet_mascot);
+        if (pv != null) {
+            pv.setLevel(previewLevel);
+            pv.triggerTapAnimation(pv.getWidth() / 2f, pv.getHeight() / 2f);
+        }
+        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
     }
 
     private void bindReminders() {
         Switch reminder = findViewById(R.id.reminder_switch);
-        reminder.setChecked(prefs.getBoolean("REMINDER_IS_ON", false));
-        reminder.setOnCheckedChangeListener((button, on) -> {
-            if (on && Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
-                reminder.setChecked(false); requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 10); return;
-            }
-            config.setReminderOn(on);
-            if (on) checkReminderPermissions();
-        });
+        View intervalCard = findViewById(R.id.card_interval);
+        boolean isOn = prefs.getBoolean("REMINDER_IS_ON", false);
+        if (reminder != null) {
+            reminder.setOnCheckedChangeListener(null);
+            reminder.setChecked(isOn);
+            reminder.setOnCheckedChangeListener((button, on) -> {
+                if (on && Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
+                    reminder.setChecked(false); requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 10); return;
+                }
+                config.setReminderOn(on);
+                if (intervalCard != null) {
+                    intervalCard.setVisibility(on ? View.VISIBLE : View.GONE);
+                }
+                if (on) checkReminderPermissions();
+            });
+        }
+        if (intervalCard != null) {
+            intervalCard.setVisibility(isOn ? View.VISIBLE : View.GONE);
+        }
         bindInterval();
     }
 
@@ -412,7 +845,7 @@ public class MainActivity extends Activity {
                 .setNegativeButton("Để sau", null).setPositiveButton("Mở cài đặt", (dialog, which) -> {
                     try { startActivity(settings); }
                     catch (android.content.ActivityNotFoundException e) {
-                        Toast.makeText(this, "Mở Cài đặt hệ thống → Ứng dụng → Aqua để cấp quyền", Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, "Mở Cài đặt hệ thống > Ứng dụng > Aqua để cấp quyền", Toast.LENGTH_LONG).show();
                     }
                 }).create());
     }
@@ -430,8 +863,41 @@ public class MainActivity extends Activity {
     private void bindSettings() {
         label(R.id.goal_button, goal() + " ml ›");
         click(R.id.goal_button, () -> number("Mục tiêu hàng ngày (ml)", goal(), true));
-        Switch theme = findViewById(R.id.theme_switch); theme.setChecked(prefs.getBoolean("THEME_DARK", false));
-        theme.setOnCheckedChangeListener((button, dark) -> { config.setThemeDark(dark); show(); });
+
+        // Switch thông báo nhắc nhở trong cài đặt
+        Switch reminder = findViewById(R.id.settings_reminder_switch);
+        View intervalCard = findViewById(R.id.card_interval);
+        boolean reminderOn = prefs.getBoolean("REMINDER_IS_ON", false);
+        if (reminder != null) {
+            reminder.setOnCheckedChangeListener(null);
+            reminder.setChecked(reminderOn);
+            reminder.setOnCheckedChangeListener((button, on) -> {
+                if (on && Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
+                    reminder.setChecked(false);
+                    requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 10);
+                    return;
+                }
+                config.setReminderOn(on);
+                if (intervalCard != null) {
+                    intervalCard.setVisibility(on ? View.VISIBLE : View.GONE);
+                }
+                if (on) checkReminderPermissions();
+            });
+        }
+        if (intervalCard != null) {
+            intervalCard.setVisibility(reminderOn ? View.VISIBLE : View.GONE);
+        }
+
+        // Switch chế độ tối ở cuối (ngay trên Aqua)
+        Switch theme = findViewById(R.id.theme_switch);
+        if (theme != null) {
+            theme.setOnCheckedChangeListener(null);
+            theme.setChecked(prefs.getBoolean("THEME_DARK", false));
+            theme.setOnCheckedChangeListener((button, dark) -> {
+                config.setThemeDark(dark);
+                recreate();
+            });
+        }
         bindInterval();
     }
 

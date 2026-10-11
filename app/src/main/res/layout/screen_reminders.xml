@@ -8,7 +8,7 @@
   </LinearLayout>
   <include layout="@layout/view_interval" />
   <LinearLayout style="@style/Aqua.Card" android:orientation="vertical">
-    <TextView style="@style/Aqua.Title" android:text="💧 Một ly nước đang chờ bạn" />
+    <TextView style="@style/Aqua.Title" android:text="Nhắc nhở thông minh" />
     <TextView style="@style/Aqua.Text" android:text="Nhắc nhở tiếp tục sau khi khởi động lại máy. Android có thể điều chỉnh thời gian để tiết kiệm pin." />
   </LinearLayout>
 </LinearLayout>
