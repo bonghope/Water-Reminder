@@ -727,23 +727,10 @@ public class MainActivity extends Activity {
     private void bindPet() {
         updateProgressAndMascot(total(), goal());
 
-        // Mascot touch interactive dialogue
         PetView petView = findViewById(R.id.pet_mascot);
         if (petView != null) {
-            petView.setOnPetClickListener(lv -> {
-                String dialogue;
-                switch (lv) {
-                    case 1: dialogue = "Tớ là Bé Nước, tớ biết đi rồi nè!"; break;
-                    case 2: dialogue = "Tớ là Giọt Nước, sắp về đích rồi cố lên bạn ơi!"; break;
-                    case 3: dialogue = "Chiến Binh Nước! Cảm ơn bạn đã hoàn thành xuất sắc hôm nay."; break;
-                    default: dialogue = "Tớ là Mầm Nước, hãy bổ sung thêm nước nhé."; break;
-                }
-                TextView tvDiag = findViewById(R.id.pet_dialogue);
-                if (tvDiag != null) {
-                    tvDiag.setText(dialogue);
-                }
-                Toast.makeText(this, dialogue, Toast.LENGTH_SHORT).show();
-            });
+            String[] reactions = getResources().getStringArray(R.array.pet_reactions);
+            petView.setOnPetClickListener(reaction -> label(R.id.pet_dialogue, reactions[reaction]));
         }
 
         // Streak status in Pet Screen
@@ -764,7 +751,7 @@ public class MainActivity extends Activity {
         PetView pv = findViewById(R.id.pet_mascot);
         if (pv != null) {
             pv.setLevel(previewLevel);
-            pv.triggerTapAnimation(pv.getWidth() / 2f, pv.getHeight() / 2f);
+            pv.celebratePreview();
         }
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
     }

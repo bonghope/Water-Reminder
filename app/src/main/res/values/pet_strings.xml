@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="pet_interaction">%1$s. Kéo ngang để xoay. Chạm để chơi.</string>
+    <string name="pet_controls">Kéo ngang để xoay 360° · Chạm để chơi</string>
+    <string-array name="pet_reactions">
+        <item>Ú òa! Suýt bắt được tớ rồi!</item>
+        <item>Hí hí, nhột quá!</item>
+        <item>Tung tăng! Chơi thêm lần nữa nhé?</item>
+    </string-array>
+</resources>
