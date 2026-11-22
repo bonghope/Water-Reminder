@@ -4,9 +4,17 @@ package com.aqua.water.ui;
 public final class PetLevels {
     private static final String[] NAMES = {"Mầm Nước", "Bé Nước", "Giọt Nước", "Chiến Binh Nước"};
     private PetLevels() {}
+    private static final int[] GOAL_PERCENT = {0, 30, 70, 100};
+
+    public static int requiredMl(int level, int goal) {
+        return (int) ((Math.max(1, goal) * (long) GOAL_PERCENT[level] + 99) / 100);
+    }
+
     public static int level(int amount, int goal) {
-        double progress = amount / (double) Math.max(1, goal);
-        return progress < 0.3 ? 0 : progress < 0.7 ? 1 : progress < 1 ? 2 : 3;
+        for (int level = GOAL_PERCENT.length - 1; level > 0; level--) {
+            if (amount >= requiredMl(level, goal)) return level;
+        }
+        return 0;
     }
     public static String name(int level) { return NAMES[Math.max(0, Math.min(3, level))]; }
     public static String title(int level) { return name(level) + " (Cấp " + (level + 1) + ")"; }

@@ -87,45 +87,28 @@ public class StreakManager {
     }
 
     public StreakInfo getStreakInfo(int dailyGoal) {
+        return getStreakInfo(date -> dailyGoal);
+    }
+
+    public interface GoalProvider {
+        int forDate(String date);
+    }
+
+    public StreakInfo getStreakInfo(GoalProvider goals) {
         Calendar cal = Calendar.getInstance();
         String todayStr = dateFormat.format(cal.getTime());
+        int dailyGoal = goals.forDate(todayStr);
         int todayIntake = dataProvider.getWaterToday(todayStr);
         boolean achievedToday = todayIntake >= dailyGoal;
         int remaining = Math.max(0, dailyGoal - todayIntake);
 
-        int streak = 0;
-        if (achievedToday) {
-            streak = 1;
-            Calendar checkCal = Calendar.getInstance();
-            checkCal.add(Calendar.DATE, -1);
-            while (true) {
-                String dStr = dateFormat.format(checkCal.getTime());
-                if (dataProvider.getWaterToday(dStr) >= dailyGoal) {
-                    streak++;
-                    checkCal.add(Calendar.DATE, -1);
-                } else {
-                    break;
-                }
-            }
-        } else {
-            Calendar checkCal = Calendar.getInstance();
-            checkCal.add(Calendar.DATE, -1);
-            String yesterdayStr = dateFormat.format(checkCal.getTime());
-            if (dataProvider.getWaterToday(yesterdayStr) >= dailyGoal) {
-                streak = 1;
-                checkCal.add(Calendar.DATE, -1);
-                while (true) {
-                    String dStr = dateFormat.format(checkCal.getTime());
-                    if (dataProvider.getWaterToday(dStr) >= dailyGoal) {
-                        streak++;
-                        checkCal.add(Calendar.DATE, -1);
-                    } else {
-                        break;
-                    }
-                }
-            } else {
-                streak = 0;
-            }
+        int streak = achievedToday ? 1 : 0;
+        cal.add(Calendar.DATE, -1);
+        String day = dateFormat.format(cal.getTime());
+        while (dataProvider.getWaterToday(day) >= goals.forDate(day)) {
+            streak++;
+            cal.add(Calendar.DATE, -1);
+            day = dateFormat.format(cal.getTime());
         }
 
         int storedBest = prefs != null ? prefs.getInt(KEY_BEST_STREAK, inMemoryBestStreak) : inMemoryBestStreak;
