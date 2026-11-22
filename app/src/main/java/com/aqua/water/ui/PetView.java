@@ -33,12 +33,7 @@ public final class PetView extends View {
     private final Path path = new Path();
     private final Matrix lightingMatrix = new Matrix();
     private final JellySphere sphere = new JellySphere();
-    private final Shader[] water = {
-            gloss(0xffe7fbff, 0xff8adfff, 0xff439ae2, 0xff215ba9),
-            gloss(0xffe0fff9, 0xff77ebe9, 0xff259fc8, 0xff1b5ca6),
-            gloss(0xffe4fcff, 0xff54e2ff, 0xff168fd6, 0xff284da2),
-            gloss(0xffe4fbff, 0xff61dcff, 0xff217ace, 0xff383b93)
-    };
+    private final Shader water = gloss(0xffe0fff9, 0xff77ebe9, 0xff259fc8, 0xff1b5ca6);
     private final Shader glass = gloss(0xffe8ffff, 0xff94edff, 0xff37b7e4, 0xff376bc1);
     private final Shader gold = gloss(0xfffff9dd, 0xffffd769, 0xffee9a38, 0xffaa542e);
     private final Shader eyes = gloss(0xff506ca2, 0xff253e72, 0xff13244f, 0xff101b3b);
@@ -49,7 +44,6 @@ public final class PetView extends View {
     private final float touchSlop;
 
     private ValueAnimator animation;
-    private OnPetClickListener listener;
     private int level;
     private int reaction = HOP;
     private int nextReaction;
@@ -65,10 +59,6 @@ public final class PetView extends View {
     private float yawSin;
     private float yawCos = 1;
 
-    public interface OnPetClickListener {
-        void onPetClicked(int reaction);
-    }
-
     public PetView(Context context, AttributeSet attrs) {
         super(context, attrs);
         touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
@@ -78,13 +68,9 @@ public final class PetView extends View {
     }
 
     public void setLevel(int value) {
-        level = Math.max(0, Math.min(water.length - 1, value));
+        level = Math.max(0, Math.min(3, value));
         setContentDescription(getResources().getString(R.string.pet_interaction, PetLevels.title(level)));
         invalidate();
-    }
-
-    public void setOnPetClickListener(OnPetClickListener listener) {
-        this.listener = listener;
     }
 
     @Override
@@ -208,7 +194,6 @@ public final class PetView extends View {
         startReaction(nextReaction);
         nextReaction = (nextReaction + 1) % 3;
         performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
-        if (listener != null) listener.onPetClicked(reaction);
         return true;
     }
 
@@ -258,14 +243,16 @@ public final class PetView extends View {
     }
 
     private void drawModel(Canvas canvas, float idle, float t) {
-        Shader body = water[level];
+        Shader body = water;
         float armLift = 0.07f * sin(idle * 2.2f) + 0.22f * wave(t);
+        if (level == 2) drawFins(canvas, idle, false);
         drawLimbs(canvas, body, armLift, false);
         if (Build.VERSION.SDK_INT >= 29 || !canvas.isHardwareAccelerated()) {
-            sphere.draw(canvas, paint, level);
+            sphere.draw(canvas, paint);
         } else {
             shaded(canvas, 0, 0, 1.03f, 1.00f, body);
         }
+        if (level == 2) drawFins(canvas, idle, true);
         drawLimbs(canvas, body, armLift, true);
 
         if (level == 3) {
@@ -302,6 +289,28 @@ public final class PetView extends View {
         if (level >= 2) {
             oval(canvas, 0.64f, 0.52f, 0.047f, 0.037f, 0x91c7ffff);
             oval(canvas, 0.73f, 0.42f, 0.025f, 0.021f, 0x91c7ffff);
+        }
+    }
+
+    private void drawFins(Canvas canvas, float idle, boolean foreground) {
+        // Three soft lobes fan out from each cheek, with a common root.
+        for (int side = -1; side <= 1; side += 2) {
+            float x = side * 0.86f;
+            float z = -0.12f;
+            if ((projectDepth(x, z) > 0.35f) != foreground) continue;
+            canvas.save();
+            canvas.translate(projectX(x, z), -0.28f);
+            canvas.scale(side * yawCos, 1f);
+            canvas.rotate(5f * sin(idle * 2.4f));
+            for (int lobe = 0; lobe < 3; lobe++) {
+                canvas.save();
+                canvas.rotate(-48f + 29f * lobe);
+                float length = 0.60f - 0.065f * lobe;
+                shaded(canvas, length * 0.42f, 0f, length * 0.58f, 0.105f, water);
+                oval(canvas, length * 0.68f, -0.035f, 0.055f, 0.018f, 0xaaffffff);
+                canvas.restore();
+            }
+            canvas.restore();
         }
     }
 
@@ -459,14 +468,8 @@ public final class PetView extends View {
     private static final class JellySphere {
         private static final int RINGS = 14;
         private static final int SLICES = 56;
-        private static final int[][] PALETTE = {
-                {0xff215ba9, 0xff49a9ef, 0xffa9edff},
-                {0xff1b5ca6, 0xff30bfcf, 0xffa0f9f0},
-                {0xff284da2, 0xff21acec, 0xff8dedff},
-                {0xff383b93, 0xff268ce5, 0xff91e9ff}
-        };
         private final float[] vertices = new float[2 * (1 + RINGS * SLICES)];
-        private final int[][] colors = new int[PALETTE.length][vertices.length / 2];
+        private final int[] colors = new int[vertices.length / 2];
         private final short[] triangles = new short[3 * SLICES * (2 * RINGS - 1)];
 
         JellySphere() {
@@ -507,18 +510,15 @@ public final class PetView extends View {
             float diffuse = clamp(-0.42f * x - 0.50f * y + 0.75f * z);
             float reflection = (float) Math.pow(clamp(-0.21f * x - 0.28f * y + 0.936f * z), 26);
             float edgeLight = 0.32f * (1 - z) * clamp(x + y);
-            for (int level = 0; level < colors.length; level++) {
-                int[] palette = PALETTE[level];
-                int base = blend(palette[0], palette[1], diffuse);
-                int lit = blend(base, palette[2], 0.39f * diffuse * diffuse + edgeLight);
-                colors[level][index] = blend(lit, Color.WHITE, 0.38f * reflection);
-            }
+            int base = blend(0xff1b5ca6, 0xff30bfcf, diffuse);
+            int lit = blend(base, 0xffa0f9f0, 0.39f * diffuse * diffuse + edgeLight);
+            colors[index] = blend(lit, Color.WHITE, 0.38f * reflection);
         }
 
-        void draw(Canvas canvas, Paint paint, int level) {
+        void draw(Canvas canvas, Paint paint) {
             paint.setColor(Color.WHITE);
             canvas.drawVertices(Canvas.VertexMode.TRIANGLES, vertices.length, vertices, 0,
-                    null, 0, colors[level], 0, triangles, 0, triangles.length, paint);
+                    null, 0, colors, 0, triangles, 0, triangles.length, paint);
         }
 
         private static float clamp(float value) {

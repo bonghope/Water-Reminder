@@ -12,7 +12,7 @@ public final class WaterChartView extends View {
     private final float density;
     private int[] values = new int[0];
     private String[] labels = new String[0];
-    private int goal = 2000;
+    private int[] goals = new int[0];
 
     public WaterChartView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -20,10 +20,10 @@ public final class WaterChartView extends View {
         dark = context.getSharedPreferences("AppConfig", 0).getBoolean("THEME_DARK", false);
     }
 
-    public void setData(int[] values, String[] labels, int goal) {
+    public void setData(int[] values, String[] labels, int[] goals) {
         this.values = values.clone();
         this.labels = labels.clone();
-        this.goal = Math.max(1, goal);
+        this.goals = goals.clone();
         invalidate();
     }
 
@@ -31,7 +31,8 @@ public final class WaterChartView extends View {
         if (values.length == 0) return;
         float left = 42 * density, top = 20 * density, bottom = getHeight() - 32 * density;
         float width = (getWidth() - left - 8 * density) / values.length;
-        int max = goal;
+        int max = 1;
+        for (int goal : goals) max = Math.max(max, goal);
         for (int value : values) max = Math.max(max, value);
         max = Math.max(1, (int) (max * 1.15f));
         int muted = dark ? 0xffa2bfd0 : 0xff7393aa;
@@ -43,11 +44,6 @@ public final class WaterChartView extends View {
             paint.setColor(dark ? 0xff254354 : 0xffe2eff6);
             canvas.drawLine(left, y, getWidth(), y, paint);
         }
-        paint.setColor(0xff00a6d7);
-        paint.setPathEffect(new DashPathEffect(new float[]{8, 6}, 0));
-        float goalY = bottom - (bottom - top) * goal / max;
-        canvas.drawLine(left, goalY, getWidth(), goalY, paint);
-        paint.setPathEffect(null);
         for (int i = 0; i < values.length; i++) {
             float x = left + i * width;
             paint.setColor(0xff00a6d7);
@@ -59,5 +55,18 @@ public final class WaterChartView extends View {
                 canvas.drawText(labels[i], x, bottom + 19 * density, paint);
             }
         }
+        Path line = new Path();
+        for (int i = 0; i < goals.length; i++) {
+            float y = bottom - (bottom - top) * goals[i] / max;
+            if (i == 0) line.moveTo(left, y);
+            else line.lineTo(left + i * width, y);
+            line.lineTo(left + (i + 1) * width, y);
+        }
+        paint.setColor(dark ? 0xffe4f5ff : 0xff183e64);
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setPathEffect(new DashPathEffect(new float[]{8, 6}, 0));
+        canvas.drawPath(line, paint);
+        paint.setPathEffect(null);
+        paint.setStyle(Paint.Style.FILL);
     }
 }

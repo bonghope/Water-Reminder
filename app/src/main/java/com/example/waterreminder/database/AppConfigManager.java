@@ -1,5 +1,8 @@
 package com.example.waterreminder.database;
 
+import java.util.Map;
+import java.util.TreeMap;
+import com.aqua.water.database.WaterStore;
 import android.content.Context;
 import android.content.SharedPreferences;
 import com.aqua.water.services.ReminderReceiver;
@@ -13,6 +16,8 @@ public class AppConfigManager {
     public static final String KEY_THEME_DARK = "THEME_DARK";
     public static final int DEFAULT_GOAL = 2000;
     public static final int DEFAULT_INTERVAL = 60;
+    private static final String GOAL_PREFIX = "goal_from_";
+    private static final String LEGACY_GOAL = "goal_before_history";
     private final Context context;
     private final SharedPreferences prefs;
 
@@ -37,9 +42,23 @@ public class AppConfigManager {
     }
     private static boolean validInterval(int minutes) { return minutes == 60 || minutes == 90 || minutes == 120; }
     public int getWaterGoal() { return prefs.getInt(KEY_WATER_GOAL, DEFAULT_GOAL); }
+    public TreeMap<String, Integer> goalHistory() {
+        TreeMap<String, Integer> goals = new TreeMap<>();
+        goals.put("", prefs.getInt(LEGACY_GOAL, getWaterGoal()));
+        for (Map.Entry<String, ?> entry : prefs.getAll().entrySet()) {
+            if (entry.getKey().startsWith(GOAL_PREFIX)) {
+                goals.put(entry.getKey().substring(GOAL_PREFIX.length()), (Integer) entry.getValue());
+            }
+        }
+        return goals;
+    }
+
     public void setWaterGoal(int goal) {
         if (goal <= 0) throw new IllegalArgumentException("Mục tiêu phải là số nguyên lớn hơn 0");
-        prefs.edit().putInt(KEY_WATER_GOAL, goal).apply();
+        SharedPreferences.Editor change = prefs.edit();
+        if (!prefs.contains(LEGACY_GOAL)) change.putInt(LEGACY_GOAL, getWaterGoal());
+        String today = WaterStore.date(System.currentTimeMillis());
+        change.putInt(GOAL_PREFIX + today, goal).putInt(KEY_WATER_GOAL, goal).apply();
     }
     public boolean isReminderOn() { return prefs.getBoolean(KEY_REMINDER_IS_ON, false); }
     public void setReminderOn(boolean on) {

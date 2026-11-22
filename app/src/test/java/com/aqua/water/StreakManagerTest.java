@@ -20,6 +20,15 @@ public class StreakManagerTest {
     }
 
     @Test
+    public void raisingGoalTodayPreservesYesterday() {
+        String yesterday = getDateOffset(1);
+        StreakManager manager = new StreakManager(date -> yesterday.equals(date) ? 1500 : 0, null);
+        StreakManager.StreakInfo info = manager.getStreakInfo(date -> yesterday.equals(date) ? 1500 : 2000);
+        assertEquals(1, info.currentStreak);
+        assertEquals(2000, info.remainingMl);
+    }
+
+    @Test
     public void testStreakZero_whenNoWaterLogged() {
         Map<String, Integer> data = new HashMap<>();
         StreakManager manager = new StreakManager(date -> data.getOrDefault(date, 0), null);

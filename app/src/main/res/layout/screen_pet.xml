@@ -5,8 +5,6 @@
 
   <LinearLayout style="@style/Aqua.Card" android:orientation="vertical" android:gravity="center_horizontal">
     <com.aqua.water.ui.PetView android:id="@+id/pet_mascot" android:layout_width="match_parent" android:layout_height="250dp" />
-    <TextView style="@style/Aqua.Caption" android:gravity="center" android:text="@string/pet_controls" />
-    <TextView android:id="@+id/pet_dialogue" style="@style/Aqua.Text" android:gravity="center" android:text="Hãy uống đủ nước mỗi ngày để lớn lên nhé" android:textStyle="italic" android:paddingTop="2dp" android:paddingBottom="6dp" />
 
     <TextView android:id="@+id/pet_name" style="@style/Aqua.Metric" android:gravity="center" android:text="" />
     <TextView android:id="@+id/pet_level" style="@style/Aqua.Caption" android:gravity="center" android:text="" />

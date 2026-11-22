@@ -89,6 +89,10 @@ public class MainActivity extends Activity {
         state.putFloat("floatingStreakY", floatingStreakY);
     }
 
+    private StreakManager.StreakInfo streakInfo() {
+        java.util.TreeMap<String, Integer> goals = config.goalHistory();
+        return streakManager.getStreakInfo(date -> goals.floorEntry(date).getValue());
+    }
     private int goal() { return Math.max(1, prefs.getInt("WATER_GOAL", 2000)); }
     private int total() { return db.total(WaterStore.date(System.currentTimeMillis())); }
     private void label(int id, String value) {
@@ -135,7 +139,7 @@ public class MainActivity extends Activity {
         header.setPadding(headerPadding, 0, headerPadding, 0);
 
         // Draggable flame follows the current streak milestone
-        StreakManager.StreakInfo headerStreak = streakManager.getStreakInfo(goal());
+        StreakManager.StreakInfo headerStreak = streakInfo();
         setFlame(R.id.header_streak_icon, headerStreak.currentStreak);
         label(R.id.header_streak_text, String.valueOf(headerStreak.currentStreak));
         View floatingBadge = findViewById(R.id.floating_streak_badge);
@@ -301,7 +305,7 @@ public class MainActivity extends Activity {
 
         addCardVisible = true;
         if (before < target && after >= target) {
-            StreakManager.StreakInfo newStreak = streakManager.getStreakInfo(target);
+            StreakManager.StreakInfo newStreak = streakInfo();
             showCelebrationDialog(newStreak);
         } else {
             Toast.makeText(this, "Thêm " + amount + " ml thành công!", Toast.LENGTH_SHORT).show();
@@ -334,9 +338,7 @@ public class MainActivity extends Activity {
 
         TextView tvMsg = new TextView(this);
         tvMsg.setText("\nChuỗi \"" + streakManager.getStreakName() + "\" đạt " + info.currentStreak + " ngày.\n\n"
-                + StreakFlame.name(info.currentStreak) + "\n\nThú cưng đã đạt "
-                + PetLevels.title(PetLevels.level(info.todayIntake, info.dailyGoal))
-                + ".\n\nHãy tiếp tục duy trì vào ngày mai nhé.");
+                + StreakFlame.name(info.currentStreak) + "\n\nHãy tiếp tục duy trì vào ngày mai nhé.");
         tvMsg.setTextSize(14);
         tvMsg.setTextColor(primaryColor);
         tvMsg.setGravity(android.view.Gravity.CENTER);
@@ -498,11 +500,26 @@ public class MainActivity extends Activity {
                         streakManager.setStreakName(name);
                         Toast.makeText(this, "Đã lưu tên chuỗi: " + streakManager.getStreakName(), Toast.LENGTH_SHORT).show();
                         show();
-                        showStreakDialog(streakManager.getStreakInfo(goal()));
+                        showStreakDialog(streakInfo());
                     }
                 })
                 .create();
         showRoundedDialog(dialog);
+    }
+
+    private static final int MAX_DRINK_ML = 2000;
+    private static final int MAX_GOAL_ML = 10000;
+
+    private int readMilliliters(EditText input, int maximum) {
+        try {
+            int value = Integer.parseInt(input.getText().toString().trim());
+            if (value >= 1 && value <= maximum) return value;
+        } catch (NumberFormatException ignored) {
+            // Empty input or an integer too large to parse.
+        }
+        input.setError("Nhập số nguyên từ 1 đến " + maximum + " ml");
+        input.requestFocus();
+        return 0;
     }
 
     private void number(String title, int initial, boolean isGoal) {
@@ -524,13 +541,11 @@ public class MainActivity extends Activity {
         AlertDialog dialog = new AlertDialog.Builder(this).setTitle(title).setView(box)
                 .setNegativeButton("Hủy", null).setPositiveButton("Lưu", null).create();
         dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
-            try {
-                int amount = Integer.parseInt(input.getText().toString().trim());
-                if (amount <= 0) throw new NumberFormatException();
-                if (isGoal) { config.setWaterGoal(amount); show(); }
-                else add(amount);
-                dialog.dismiss();
-            } catch (NumberFormatException e) { input.setError("Nhập số nguyên lớn hơn 0"); }
+            int amount = readMilliliters(input, isGoal ? MAX_GOAL_ML : MAX_DRINK_ML);
+            if (amount == 0) return;
+            if (isGoal) { config.setWaterGoal(amount); show(); }
+            else add(amount);
+            dialog.dismiss();
         }));
         showRoundedDialog(dialog);
     }
@@ -644,12 +659,10 @@ public class MainActivity extends Activity {
         AlertDialog dialog = new AlertDialog.Builder(this).setTitle("Chỉnh sửa bản ghi").setView(form)
                 .setNegativeButton("Hủy", null).setPositiveButton("Lưu", null).create();
         dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
-            try {
-                int value = Integer.parseInt(input.getText().toString().trim());
-                if (value <= 0) throw new NumberFormatException();
-                db.edit(id, types[drink.getSelectedItemPosition()], value);
-                dialog.dismiss(); show();
-            } catch (NumberFormatException e) { input.setError("Nhập số nguyên lớn hơn 0"); }
+            int value = readMilliliters(input, MAX_DRINK_ML);
+            if (value == 0) return;
+            db.edit(id, types[drink.getSelectedItemPosition()], value);
+            dialog.dismiss(); show();
         }));
         showRoundedDialog(dialog);
     }
@@ -660,11 +673,15 @@ public class MainActivity extends Activity {
         selectPeriodFilter(R.id.stats_week, !month);
         selectPeriodFilter(R.id.stats_month, month);
         int days = month ? 30 : 7, sum = 0, success = 0;
+        java.util.TreeMap<String, Integer> history = config.goalHistory();
+        int[] goals = new int[days];
         int[] values = new int[days]; String[] labels = new String[days];
         Calendar day = Calendar.getInstance(); day.add(Calendar.DATE, -days + 1);
         for (int i = 0; i < days; i++) {
-            values[i] = db.total(WaterStore.date(day.getTimeInMillis())); sum += values[i];
-            if (values[i] >= goal()) success++;
+            String date = WaterStore.date(day.getTimeInMillis());
+            goals[i] = history.floorEntry(date).getValue();
+            values[i] = db.total(date); sum += values[i];
+            if (values[i] >= goals[i]) success++;
             if (!month) {
                 labels[i] = getDayOfWeekLabel(day.get(Calendar.DAY_OF_WEEK));
             } else {
@@ -672,8 +689,8 @@ public class MainActivity extends Activity {
             }
             day.add(Calendar.DATE, 1);
         }
-        ((WaterChartView) findViewById(R.id.water_chart)).setData(values, labels, goal());
-        label(R.id.chart_goal, "Đường nét đứt: mục tiêu " + goal() + " ml");
+        ((WaterChartView) findViewById(R.id.water_chart)).setData(values, labels, goals);
+        label(R.id.chart_goal, "Đường nét đứt: mục tiêu từng ngày (ml)");
 
         
         label(R.id.stats_average, "Trung bình " + sum / days + " ml / ngày");
@@ -727,33 +744,41 @@ public class MainActivity extends Activity {
     private void bindPet() {
         updateProgressAndMascot(total(), goal());
 
-        PetView petView = findViewById(R.id.pet_mascot);
-        if (petView != null) {
-            String[] reactions = getResources().getStringArray(R.array.pet_reactions);
-            petView.setOnPetClickListener(reaction -> label(R.id.pet_dialogue, reactions[reaction]));
-        }
-
         // Streak status in Pet Screen
-        StreakManager.StreakInfo petStreak = streakManager.getStreakInfo(goal());
+        StreakManager.StreakInfo petStreak = streakInfo();
         setFlame(R.id.pet_streak_icon, petStreak.currentStreak);
         label(R.id.pet_streak_title, streakManager.getStreakName() + " • " + petStreak.currentStreak + " ngày");
         label(R.id.pet_streak_desc, petStreak.isGoalAchievedToday ? "✓ Đã thắp sáng hôm nay" : "⚡ Còn " + petStreak.remainingMl + " ml để giữ lửa");
         click(R.id.pet_streak_card, () -> showStreakDialog(petStreak));
 
         // 4 Evolution Levels
-        click(R.id.pet_small, () -> previewPetLevel(0, PetLevels.title(0)));
-        click(R.id.pet_growing, () -> previewPetLevel(1, PetLevels.title(1)));
-        click(R.id.pet_healthy, () -> previewPetLevel(2, PetLevels.title(2)));
-        click(R.id.pet_bright, () -> previewPetLevel(3, PetLevels.title(3)));
+        click(R.id.pet_small, () -> previewPetLevel(0));
+        click(R.id.pet_growing, () -> previewPetLevel(1));
+        click(R.id.pet_healthy, () -> previewPetLevel(2));
+        click(R.id.pet_bright, () -> previewPetLevel(3));
     }
 
-    private void previewPetLevel(int previewLevel, String msg) {
+    private void previewPetLevel(int previewLevel) {
+        int current = total();
+        int target = goal();
+        int threshold = PetLevels.requiredMl(previewLevel, target);
+        String title = PetLevels.title(previewLevel);
+        if (current < threshold) {
+            AlertDialog dialog = new AlertDialog.Builder(this)
+                    .setTitle("Tiến hóa lên " + title)
+                    .setMessage("Bạn cần uống thêm " + (threshold - current)
+                            + " ml để đạt mốc " + threshold + " ml hôm nay.")
+                    .setPositiveButton("Đóng", null)
+                    .create();
+            showRoundedDialog(dialog);
+            return;
+        }
+        label(R.id.pet_name, title);
         PetView pv = findViewById(R.id.pet_mascot);
         if (pv != null) {
             pv.setLevel(previewLevel);
             pv.celebratePreview();
         }
-        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
     }
 
     private void bindReminders() {
