@@ -246,6 +246,7 @@ public final class PetView extends View {
         Shader body = water;
         float armLift = 0.07f * sin(idle * 2.2f) + 0.22f * wave(t);
         if (level == 2) drawFins(canvas, idle, false);
+        drawHeadpiece(canvas, false);
         drawLimbs(canvas, body, armLift, false);
         if (Build.VERSION.SDK_INT >= 29 || !canvas.isHardwareAccelerated()) {
             sphere.draw(canvas, paint);
@@ -255,22 +256,7 @@ public final class PetView extends View {
         if (level == 2) drawFins(canvas, idle, true);
         drawLimbs(canvas, body, armLift, true);
 
-        if (level == 3) {
-            // Small crown echoes the final evolution without hiding the face.
-            limb(canvas, 0.10f, -0.90f, 0.34f, 0.44f, 0.13f, 0, gold);
-            part(canvas, -0.16f, -1.03f, 0.34f, 0.14f, 0.22f, gold);
-            part(canvas, 0.10f, -1.12f, 0.34f, 0.16f, 0.29f, gold);
-            part(canvas, 0.36f, -1.03f, 0.34f, 0.14f, 0.22f, gold);
-            part(canvas, 0.10f, -0.94f, 0.49f, 0.07f, 0.085f, glass);
-        } else {
-            limb(canvas, 0.08f, -0.87f, 0.13f, 0.21f, 0.35f, 31f, body);
-            if (level >= 1) {
-                limb(canvas, -0.31f, -0.85f, 0.09f, 0.15f, 0.24f, -35f, body);
-            }
-            if (level == 2) {
-                part(canvas, 0.44f, -1.17f + 0.07f * sin(idle * 2.5f), 0.02f, 0.12f, 0.13f, glass);
-            }
-        }
+        drawHeadpiece(canvas, true);
 
         boolean laughing = reaction == LAUGH && t > 0.08f && t < 0.88f;
         boolean startled = reaction == DODGE && t > 0.07f && t < 0.64f;
@@ -290,6 +276,58 @@ public final class PetView extends View {
             oval(canvas, 0.64f, 0.52f, 0.047f, 0.037f, 0x91c7ffff);
             oval(canvas, 0.73f, 0.42f, 0.025f, 0.021f, 0x91c7ffff);
         }
+    }
+
+    private void drawHeadpiece(Canvas canvas, boolean front) {
+        if (level == 3) {
+            drawCrown(canvas, front);
+            return;
+        }
+        drawTuft(canvas, front, 0.08f, 0.13f, 0.21f, 0.35f, 31f);
+        if (level >= 1) drawTuft(canvas, front, -0.31f, 0.09f, 0.15f, 0.24f, -35f);
+        if (level == 2) drawTuft(canvas, front, 0.31f, -0.08f, 0.12f, 0.23f, 30f);
+    }
+
+    private void drawTuft(Canvas canvas, boolean front, float x, float z,
+                          float width, float height, float tilt) {
+        if ((projectDepth(x, z) >= 0f) != front) return;
+        float surfaceY = -(float) Math.sqrt(1f - x * x / (1.03f * 1.03f) - z * z);
+        limb(canvas, x, surfaceY + 0.07f, z, width, height, tilt * yawCos, water);
+    }
+
+    private void drawCrown(Canvas canvas, boolean front) {
+        // A circular band sits inside the head; its five tips rotate around that band.
+        final int segments = 60;
+        final float radius = 0.38f;
+        for (int i = 0; i < segments; i++) {
+            float a = TAU * i / segments;
+            float b = TAU * (i + 1) / segments;
+            float mid = (a + b) * 0.5f;
+            float depth = projectDepth(sin(mid), (float) Math.cos(mid));
+            if ((depth >= 0f) != front) continue;
+            float x1 = projectX(radius * sin(a), radius * (float) Math.cos(a));
+            float x2 = projectX(radius * sin(b), radius * (float) Math.cos(b));
+            path.reset();
+            path.moveTo(x1, -0.90f);
+            path.lineTo(x1, crownRimY(a));
+            path.lineTo(x2, crownRimY(b));
+            path.lineTo(x2, -0.90f);
+            path.close();
+            int light = Math.round(22 * depth);
+            paint.setColor(Color.rgb(230 + light, 171 + light, 62 + light));
+            canvas.drawPath(path, paint);
+        }
+        if (front) {
+            shaded(canvas, 0, -0.94f, radius, 0.065f, gold);
+            if (yawCos > 0f) {
+                part(canvas, 0, -0.98f, radius, 0.07f * yawCos, 0.075f, glass);
+            }
+        }
+    }
+
+    private static float crownRimY(float angle) {
+        float peak = 0.5f + 0.5f * (float) Math.cos(5 * angle);
+        return -1.03f - 0.23f * peak * peak;
     }
 
     private void drawFins(Canvas canvas, float idle, boolean foreground) {

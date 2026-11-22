@@ -55,7 +55,7 @@
       android:paddingBottom="42dp">
     <TextView
         style="@style/Aqua.Caption"
-        android:text="Aqua • Water Reminder"
+        android:text="@string/app_name"
         android:textSize="13sp"
         android:textStyle="bold"
         android:textColor="@color/aqua_muted"
