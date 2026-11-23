@@ -27,12 +27,12 @@ public class WaterStore {
             default: return "Nước lọc";
         }
     }
-    private static int hydration(int amount, int category) {
+    public static int hydrationForCategory(int amount, int category) {
         return category == 2 ? (int) (amount * 0.8) : category == 3 ? (int) (amount * 0.7) : amount;
     }
     public void add(int amount, String type) {
         long time = System.currentTimeMillis(); int category = category(type);
-        if (backend.insertLog(new WaterLog(category, amount, hydration(amount, category), time), date(time)) == -1)
+        if (backend.insertLog(new WaterLog(category, amount, hydrationForCategory(amount, category), time), date(time)) == -1)
             throw new android.database.SQLException("Không thể lưu bản ghi");
     }
     public int total(String date) {
@@ -52,7 +52,7 @@ public class WaterStore {
     public void edit(long id, String type, int amount) {
         if (amount <= 0) throw new IllegalArgumentException("Amount must be positive");
         int category = category(type);
-        backend.updateLog(Math.toIntExact(id), category, amount, hydration(amount, category));
+        backend.updateLog(Math.toIntExact(id), category, amount, hydrationForCategory(amount, category));
     }
     public void close() { backend.close(); }
 }
