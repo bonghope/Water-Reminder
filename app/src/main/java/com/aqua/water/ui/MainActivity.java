@@ -220,13 +220,23 @@ public class MainActivity extends Activity {
             waterView.setProgress(total() / (float) goal());
             waterView.setActive(resumed);
         } else inflatedWater.setVisibility(View.GONE);
+        float density = getResources().getDisplayMetrics().density;
+        int iconSize = Math.round(30 * density);
+        int verticalPadding = Math.round(14 * density);
         for (int i = 0; i < navigation.length; i++) {
             final int next = i;
             TextView item = findViewById(navigation[i]);
-            int color = i == tab ? getColor(R.color.aqua_blue) : Color.rgb(143, 163, 184);
-            item.setTextColor(color);
+            boolean selected = i == tab;
+            item.setContentDescription(item.getText());
+            item.setText(null);
+            android.graphics.drawable.Drawable icon = item.getCompoundDrawables()[1];
+            icon.setBounds(0, 0, iconSize, iconSize);
+            item.setCompoundDrawables(null, icon, null, null);
+            item.setCompoundDrawablePadding(0);
+            item.setPadding(0, verticalPadding, 0, verticalPadding);
+            int color = selected ? getColor(R.color.aqua_blue) : Color.rgb(143, 163, 184);
             item.setCompoundDrawableTintList(android.content.res.ColorStateList.valueOf(color));
-            item.setSelected(i == tab);
+            item.setSelected(selected);
             item.setOnClickListener(v -> { tab = next; show(); });
         }
         click(R.id.nav_add_water, () -> {
@@ -273,11 +283,79 @@ public class MainActivity extends Activity {
         click(R.id.btn300ml, () -> add(300));
         click(R.id.btn500ml, () -> add(500));
         click(R.id.btnCustom, () -> number("Lượng nước (ml)", 0, false));
+        click(R.id.btnHydrationInfo, this::showHydrationInfo);
         click(R.id.btnCloseCard, () -> { addCardVisible = false; updateAddCard(); });
         click(R.id.btnReopenCard, () -> { addCardVisible = true; updateAddCard(); });
         click(R.id.tvGoToHistory, () -> { tab = 1; show(); });
         updateAddCard();
     }
+
+    private void showHydrationInfo() {
+        float density = getResources().getDisplayMetrics().density;
+        int padding = Math.round(24 * density);
+        int iconSize = Math.round(32 * density);
+
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(padding, Math.round(8 * density), padding, Math.round(8 * density));
+
+        android.content.res.TypedArray colors = obtainStyledAttributes(new int[]{
+                android.R.attr.textColorPrimary, android.R.attr.textColorSecondary
+        });
+        int mainTextColor = colors.getColor(0, Color.BLACK);
+        int supportingTextColor = colors.getColor(1, mainTextColor);
+        colors.recycle();
+
+        TextView explanation = new TextView(this);
+        explanation.setText("Thành phần của các loại đồ uống có thể ảnh hưởng đến lượng nước cơ thể giữ lại. "
+                + "Vì vậy, Dewly lấy nước lọc làm mốc và dùng tỷ lệ quy đổi riêng để theo dõi mục tiêu. "
+                );
+        explanation.setTextSize(14);
+        explanation.setTextColor(supportingTextColor);
+        explanation.setTypeface(explanation.getTypeface(), android.graphics.Typeface.ITALIC);
+        explanation.setPadding(0, 0, 0, Math.round(4 * density));
+        content.addView(explanation);
+
+
+        String[] names = {"Nước lọc", "Trà / Cà phê", "Nước ngọt", "Sữa"};
+        int[] icons = {R.drawable.water_icon, R.drawable.cafe_icon, R.drawable.sweet_icon, R.drawable.milk_icon};
+        for (int i = 0; i < names.length; i++) {
+            int rate = WaterStore.hydrationForCategory(100, i + 1);
+            int credited = WaterStore.hydrationForCategory(200, i + 1);
+
+            TextView row = new TextView(this);
+            String heading = names[i] + " · " + rate + "%";
+            android.text.SpannableString details = new android.text.SpannableString(
+                    heading + "\nUống 200 ml, quy đổi thành " + credited + " ml");
+            details.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.BOLD),
+                    0, heading.length(), 0);
+            details.setSpan(new android.text.style.RelativeSizeSpan(1.2f),
+                    0, heading.length(), 0);
+            details.setSpan(new android.text.style.ForegroundColorSpan(supportingTextColor),
+                    heading.length() + 1, details.length(), 0);
+            row.setText(details);
+            row.setTextColor(mainTextColor);
+            row.setTextSize(15);
+            row.setLineSpacing(Math.round(2 * density), 1f);
+            row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            row.setPadding(0, Math.round(4 * density), 0, Math.round(4 * density));
+
+            android.graphics.drawable.Drawable icon = getDrawable(icons[i]);
+            icon.setBounds(0, 0, iconSize, iconSize);
+            row.setCompoundDrawablesRelative(icon, null, null, null);
+            row.setCompoundDrawablePadding(Math.round(12 * density));
+            content.addView(row);
+        }
+
+        android.widget.ScrollView scroll = new android.widget.ScrollView(this);
+        scroll.addView(content);
+        showRoundedDialog(new AlertDialog.Builder(this)
+                .setTitle("Cách tính lượng nước")
+                .setView(scroll)
+                .setPositiveButton("Đóng", null)
+                .create());
+    }
+
 
     private void updateDrinkSelection() {
         int[] ids = {R.id.ivWater, R.id.ivTea, R.id.ivSweet, R.id.ivMilk};
@@ -585,15 +663,15 @@ public class MainActivity extends Activity {
     private void bindHistory() {
         click(R.id.filter_today, () -> { week = false; show(); });
         click(R.id.filter_week, () -> { week = true; show(); });
-        selectPeriodFilter(R.id.filter_today, !week);
-        selectPeriodFilter(R.id.filter_week, week);
+        styleSelectableChoice(R.id.filter_today, !week);
+        styleSelectableChoice(R.id.filter_week, week);
         findViewById(R.id.history_summary).setVisibility(week ? View.GONE : View.VISIBLE);
         findViewById(R.id.history_hint).setVisibility(week ? View.GONE : View.VISIBLE);
         if (week) bindDailyHistory();
         else { label(R.id.history_total, total() + " ml"); bindLogs(false, 0); }
     }
 
-    private void selectPeriodFilter(int id, boolean selected) {
+    private void styleSelectableChoice(int id, boolean selected) {
         TextView button = findViewById(id);
         button.setSelected(selected);
         button.setBackgroundResource(R.drawable.bg_history_filter);
@@ -670,8 +748,8 @@ public class MainActivity extends Activity {
     private void bindStats() {
         click(R.id.stats_week, () -> { month = false; show(); });
         click(R.id.stats_month, () -> { month = true; show(); });
-        selectPeriodFilter(R.id.stats_week, !month);
-        selectPeriodFilter(R.id.stats_month, month);
+        styleSelectableChoice(R.id.stats_week, !month);
+        styleSelectableChoice(R.id.stats_month, month);
         int days = month ? 30 : 7, sum = 0, success = 0;
         java.util.TreeMap<String, Integer> history = config.goalHistory();
         int[] goals = new int[days];
@@ -828,11 +906,13 @@ public class MainActivity extends Activity {
     }
 
     private void bindInterval() {
-        label(R.id.interval_current, "Đang chọn: " + prefs.getInt("REMINDER_INTERVAL", 60) + " phút");
+        int selectedMinutes = config.getReminderInterval();
+        label(R.id.interval_current, "Đang chọn: " + selectedMinutes + " phút");
         int[] ids = {R.id.interval_60, R.id.interval_90, R.id.interval_120};
         int[] minutes = {60, 90, 120};
         for (int i = 0; i < ids.length; i++) {
             final int value = minutes[i];
+            styleSelectableChoice(ids[i], value == selectedMinutes);
             click(ids[i], () -> { config.setReminderInterval(value); show(); });
         }
     }

@@ -5,7 +5,7 @@
   <attr name="aquaButton" format="color" />
 
   <style name="Theme.Aqua" parent="android:style/Theme.Material.Light.NoActionBar">
-    <item name="android:fontFamily">@font/svn_gilroy</item>
+    <item name="android:fontFamily">sans-serif</item>
     <item name="android:colorAccent">@color/aqua_blue</item>
     <item name="android:textColorPrimary">@color/aqua_ink</item>
     <item name="android:textColorSecondary">@color/aqua_muted</item>
@@ -16,7 +16,7 @@
   </style>
 
   <style name="Theme.Aqua.Dark" parent="android:style/Theme.Material.NoActionBar">
-    <item name="android:fontFamily">@font/svn_gilroy</item>
+    <item name="android:fontFamily">sans-serif</item>
     <item name="android:colorAccent">@color/aqua_blue</item>
     <item name="android:textColorPrimary">@color/aqua_dark_ink</item>
     <item name="android:textColorSecondary">@color/aqua_dark_muted</item>
@@ -27,7 +27,7 @@
   </style>
 
   <style name="Aqua.Text" parent="">
-    <item name="android:fontFamily">@font/svn_gilroy</item>
+    <item name="android:fontFamily">sans-serif</item>
     <item name="android:layout_width">match_parent</item>
     <item name="android:layout_height">wrap_content</item>
     <item name="android:textSize">14sp</item>
@@ -37,25 +37,25 @@
   </style>
 
   <style name="Aqua.Title" parent="Aqua.Text">
-    <item name="android:fontFamily">@font/svn_gilroy</item>
+    <item name="android:fontFamily">sans-serif</item>
     <item name="android:textSize">19sp</item>
     <item name="android:textStyle">bold</item>
   </style>
 
   <style name="Aqua.Caption" parent="Aqua.Text">
-    <item name="android:fontFamily">@font/svn_gilroy</item>
+    <item name="android:fontFamily">sans-serif</item>
     <item name="android:textSize">13sp</item>
     <item name="android:textColor">?android:attr/textColorSecondary</item>
   </style>
 
   <style name="Aqua.Metric" parent="Aqua.Text">
-    <item name="android:fontFamily">@font/svn_gilroy</item>
+    <item name="android:fontFamily">sans-serif</item>
     <item name="android:textSize">23sp</item>
     <item name="android:textColor">@color/aqua_blue</item>
   </style>
 
   <style name="Aqua.Button" parent="Aqua.Text">
-    <item name="android:fontFamily">@font/svn_gilroy</item>
+    <item name="android:fontFamily">sans-serif</item>
     <item name="android:gravity">center</item>
     <item name="android:textColor">@color/aqua_blue</item>
     <item name="android:padding">12dp</item>
@@ -66,7 +66,7 @@
   </style>
 
   <style name="Aqua.Choice" parent="Aqua.Button">
-    <item name="android:fontFamily">@font/svn_gilroy</item>
+    <item name="android:fontFamily">sans-serif</item>
     <item name="android:layout_width">0dp</item>
     <item name="android:layout_weight">1</item>
     <item name="android:layout_margin">3dp</item>
@@ -85,7 +85,7 @@
   </style>
 
   <style name="Aqua.Nav" parent="Aqua.Text">
-    <item name="android:fontFamily">@font/svn_gilroy</item>
+    <item name="android:fontFamily">sans-serif</item>
     <item name="android:layout_width">0dp</item>
     <item name="android:layout_weight">1</item>
     <item name="android:minHeight">54dp</item>
@@ -98,7 +98,7 @@
   </style>
 
   <style name="Aqua.BottomNav" parent="">
-    <item name="android:fontFamily">@font/svn_gilroy</item>
+    <item name="android:fontFamily">sans-serif</item>
     <item name="android:layout_width">0dp</item>
     <item name="android:layout_height">match_parent</item>
     <item name="android:layout_weight">1</item>

@@ -14,10 +14,11 @@ import android.view.Surface;
 import android.view.View;
 import android.util.AttributeSet;
 
-/** Full-window water backdrop, driven by gravity and short acceleration impulses. */
+
 public final class WaterView extends View implements SensorEventListener {
     public WaterView(Context context, AttributeSet attrs) {
-        this(context, attrs, 0, context.getSharedPreferences("AppConfig", 0).getBoolean("THEME_DARK", false));
+        this(context, attrs, 0, context.getSharedPreferences("AppConfig", 0)
+                .getBoolean("THEME_DARK", false));
     }
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path water = new Path();
@@ -29,7 +30,7 @@ public final class WaterView extends View implements SensorEventListener {
     private LinearGradient gradient;
     private boolean active, running, gravityReady;
     private long lastFrame, lastSensor;
-    private float targetLevel, level, targetSlope, slope, velocity, energy, phase;
+    private float targetLevel, level, targetAngle, angle, velocity, energy, phase;
 
     public WaterView(Context context, float progress, boolean dark) {
         this(context, null, progress, dark);
@@ -97,8 +98,9 @@ public final class WaterView extends View implements SensorEventListener {
             float dt = lastFrame == 0 ? 1f / 60 : Math.min(.04f, (now - lastFrame) / 1_000_000_000f);
             lastFrame = now;
             // Damped spring: water overshoots after a shake, then settles.
-            velocity += ((targetSlope - slope) * 22f - velocity * 7f) * dt;
-            slope = Math.max(-.65f, Math.min(.65f, slope + velocity * dt));
+            float angleDelta = (float) Math.IEEEremainder(targetAngle - angle, 360.0);
+            velocity += (angleDelta * 22f - velocity * 7f) * dt;
+            angle = (float) Math.IEEEremainder(angle + velocity * dt, 360.0);
             energy *= (float) Math.exp(-1.8f * dt);
             level += (targetLevel - level) * (1f - (float) Math.exp(-3f * dt));
             phase = (phase + dt * (1.4f + energy * 2f)) % ((float) Math.PI * 2);
@@ -130,16 +132,14 @@ public final class WaterView extends View implements SensorEventListener {
             case Surface.ROTATION_180: gx = -gravity[0]; gy = -gravity[1]; break;
             case Surface.ROTATION_270: gx = gravity[1]; gy = -gravity[0]; break;
         }
-        // Flat on a table: avoid amplifying noisy horizontal gravity readings.
-        targetSlope = Math.max(-.6f, Math.min(.6f, -gx / Math.max(4f, Math.abs(gy))));
+
+        if (Math.hypot(gx, gy) > 2f) {
+            targetAngle = (float) Math.toDegrees(Math.atan2(gx, gy));
+        }
         float shake = (float) Math.sqrt(shakeSquared);
         if (shake > .8f) {
             energy = Math.min(1.5f, energy + (shake - .8f) * dt * .7f);
-            float impulseX = event.values[0] - gravity[0];
-            if (rotation == Surface.ROTATION_90) impulseX = -(event.values[1] - gravity[1]);
-            else if (rotation == Surface.ROTATION_180) impulseX = -impulseX;
-            else if (rotation == Surface.ROTATION_270) impulseX = event.values[1] - gravity[1];
-            velocity = Math.max(-3f, Math.min(3f, velocity - impulseX * dt * .6f));
+
         }
     }
 
@@ -151,34 +151,86 @@ public final class WaterView extends View implements SensorEventListener {
     }
 
     @Override protected void onDraw(Canvas canvas) {
-        float w = getWidth(), h = getHeight();
+        float w = getWidth();
+        float h = getHeight();
         if (w == 0 || h == 0) return;
-        // Small idle ripple remains visible at zero; the main level follows intake.
-        float visibleLevel = Math.max(24 * density / h, Math.min(.97f, level));
-        float y = h * (1f - visibleLevel);
+
+        float cx = w / 2f;
+        float cy = h / 2f;
+        double radians = Math.toRadians(angle);
+        float sin = (float) Math.abs(Math.sin(radians));
+        float cos = (float) Math.abs(Math.cos(radians));
+
+        // Kích thước khung nhìn chiếu lên trục vuông góc với mặt nước.
+        float projectedWidth = w * sin;
+        float projectedHeight = h * cos;
+        float shortSpan = Math.min(projectedWidth, projectedHeight);
+        float longSpan = Math.max(projectedWidth, projectedHeight);
+        float halfDepth = (shortSpan + longSpan) / 2f;
+
+        float visibleLevel = Math.max(24f * density / h, Math.min(.97f, level));
+        visibleLevel = Math.min(.97f, visibleLevel);
+        float tail = Math.min(visibleLevel, 1f - visibleLevel);
+        float triangleFraction = shortSpan / (2f * longSpan);
+
+        float depthFromEdge;
+        if (tail < triangleFraction) {
+            depthFromEdge = (float) Math.sqrt(2f * tail * shortSpan * longSpan);
+        } else {
+            depthFromEdge = tail * longSpan + shortSpan / 2f;
+        }
+
+        float offset = halfDepth - depthFromEdge;
+        float surfaceY = cy + (visibleLevel <= .5f ? offset : -offset);
+        float halfReach = (w * cos + h * sin) / 2f + 8f * density;
+        float left = cx - halfReach;
+        float right = cx + halfReach;
+        float bottom = cy + halfDepth + 64f * density;
         float amplitude = density * (5f + energy * 20f);
+
+        canvas.save();
+        canvas.clipRect(0f, 0f, w, h);
+        canvas.rotate(angle, cx, cy);
+
         for (int layer = 0; layer < 2; layer++) {
             water.reset();
-            for (float x = 0; x <= w + 8 * density; x += 8 * density) {
-                float px = Math.min(w, x);
+            for (float x = left; ; x += 8f * density) {
+                float px = Math.min(x, right);
                 float wave = (float) Math.sin(px / w * Math.PI * 2 + phase + layer * 1.7f);
                 float ripple = (float) Math.sin(px / w * Math.PI * 4 - phase * 1.3f);
-                float py = y + (px - w / 2) * slope + wave * amplitude + ripple * amplitude * .25f + layer * 9 * density;
-                if (x == 0) water.moveTo(px, py); else water.lineTo(px, py);
+                float py = surfaceY + wave * amplitude
+                        + ripple * amplitude * .25f + layer * 9f * density;
+
+                if (x == left) {
+                    water.moveTo(px, py);
+                } else {
+                    water.lineTo(px, py);
+                }
+                if (px == right) break;
             }
-            water.lineTo(w, h); water.lineTo(0, h); water.close();
+            water.lineTo(right, bottom);
+            water.lineTo(left, bottom);
+            water.close();
+
             paint.setShader(gradient);
             paint.setAlpha(layer == 0 ? 100 : 220);
             canvas.drawPath(water, paint);
         }
+
         paint.setShader(null);
         paint.setColor(dark ? 0x305bd7e8 : 0x55ffffff);
+        float visibleBottom = cy + halfDepth;
+        float span = Math.max(1f, visibleBottom - surfaceY);
         for (int i = 0; i < 10; i++) {
-            float x = w * (i + .5f) / 10 + (float) Math.sin(phase + i) * density * 8;
-            float span = Math.max(1, h - y);
-            float by = h - ((phase / ((float) Math.PI * 2) + i * .137f) % 1f) * span;
-            if (by > y + (x - w / 2) * slope + amplitude * 2)
-                canvas.drawCircle(x, by, density * (2 + i % 3), paint);
+            float x = left + (right - left) * (i + .5f) / 10f;
+            x += (float) Math.sin(phase + i) * density * 8f;
+            float travel = (phase / ((float) Math.PI * 2f) + i * .137f) % 1f;
+            float bubbleY = visibleBottom - travel * span;
+            if (bubbleY > surfaceY + amplitude * 2f) {
+                canvas.drawCircle(x, bubbleY, density * (2 + i % 3), paint);
+            }
         }
+
+        canvas.restore();
     }
 }
